@@ -2,7 +2,11 @@
 
 //$debug_maxdatasets = 5;
 $base = 'http://lod-cloud.net/';
-$dump_filename = 'void.ttl';
+$dir = 'output';
+if (is_dir($dir)) {
+  echo "Must delete output directory first: $dir\n";
+  die();
+}
 
 @ini_set('error_reporting', E_ALL);
 
@@ -146,7 +150,7 @@ foreach ($ckan_licenses as $license) {
 }
 echo "OK (" . count($licenses) . " licenses)\n";
 
-$uris = new LOD_Cloud_URI_Scheme($base, $dump_filename);
+$uris = new LOD_Cloud_URI_Scheme($base);
 
 // Prepare RDF writer
 $namespaces = array(
@@ -165,8 +169,9 @@ $namespaces = array(
 );
 include_once('rdfwriter.inc.php');
 include_once('rdftemplating.inc.php');
-$out = new RDFWriter($namespaces);
-triple_destination($out);
+mkdir($dir);
+$dump_context = new RDFWriter($namespaces);
+add_triple_destination($dump_context);
 
 // Create RDF metadata about the RDF document itself
 about($uris->dump());
@@ -187,6 +192,9 @@ rel('foaf:homepage', 'http://richard.cyganiak.de/');
 rel('foaf:mbox', 'mailto:richard@cyganiak.de');
 
 // Create RDF information about themes
+$themes_context = new RDFWriter($namespaces);
+add_triple_destination($themes_context);
+
 about($uris->themes(), 'skos:ConceptScheme');
 property('skos:prefLabel', 'LOD Cloud Themes');
 foreach ($themes as $id => $theme) {
@@ -195,16 +203,28 @@ foreach ($themes as $id => $theme) {
   property('skos:scopeNote', @$theme['note']);
   rel('skos:inScheme', $uris->themes());
 }
+remove_triple_destination($themes_context);
+mkdir("$dir/themes");
+write_turtle($themes_context, "$dir/themes/index.ttl");
 
 // Create RDF information about licenses
+$licenses_context = new RDFWriter($namespaces);
+add_triple_destination($licenses_context);
+
 foreach ($licenses as $id => $license) {
   about($uris->license($id));
   property('rdfs:label', $license->title);
   rel('foaf:page', $license->url);
 }
+remove_triple_destination($licenses_context);
+mkdir("$dir/licenses");
+write_turtle($licenses_context, "$dir/licenses/index.ttl");
 
 // Create RDF information about each dataset
 foreach ($datasets as $id => $dataset) {
+  $dataset_context = new RDFWriter($namespaces);
+  add_triple_destination($dataset_context);
+
   about($uris->dataset($id), 'void:Dataset');
   property('dcterms:title', $dataset->title);
   property('skos:altLabel', @$dataset->extras->shortname);
@@ -263,25 +283,32 @@ foreach ($datasets as $id => $dataset) {
     property("dcterms:description", $details['description']);
     property("dcterms:format", $details['format']);
   }
+
+  remove_triple_destination($dataset_context);
+  write_turtle($dataset_context, "$dir/$id.ttl");
 }
 
-// Write to file
-echo "Writing to file $dump_filename ... ";
-$out->to_turtle_file($dump_filename);
-echo "OK\n";
+// Write dump
+remove_triple_destination($dump_context);
+mkdir("$dir/data");
+write_turtle($dump_context, "$dir/data/void.ttl");
+
+function write_turtle($context, $filename) {
+  echo "Writing $filename ... ";
+  $context->to_turtle_file($filename);
+  echo "OK\n";
+}
 
 
 class LOD_Cloud_URI_Scheme {
   var $_base;
-  var $_dump_filename;
 
-  function __construct($base_uri, $dump_filename) {
+  function __construct($base_uri) {
     $this->_base = $base_uri;
-    $this->_dump_filename = $dump_filename;
   }
 
   function home() { return $this->_base; }
-  function dump() { return $this->_base . 'data/' . $this->_dump_filename; }
+  function dump() { return $this->_base . 'data/void.ttl'; }
   function dataset($id) { return $this->_base . $this->_escape($id); }
   function linkset($source_id, $target_id) { return $this->dataset($source_id) . '/links/' . $this->_escape($target_id); }
   function contributor($dataset_id, $role) { return $this->dataset($dataset_id) . '/' . $role; }
