@@ -1,6 +1,6 @@
 <?php
 
-//$debug_maxdatasets = 5;
+$debug_maxdatasets = 5;
 $base = 'http://lod-cloud.net/';
 $dir = 'output';
 if (is_dir($dir)) {
@@ -150,134 +150,34 @@ foreach ($ckan_licenses as $license) {
 }
 echo "OK (" . count($licenses) . " licenses)\n";
 
-$uris = new LOD_Cloud_URI_Scheme($base);
 
-// Prepare RDF writer
-$namespaces = array(
-    'void' => 'http://rdfs.org/ns/void#',
-    'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-    'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
-    'owl' => 'http://www.w3.org/2002/07/owl#',
-    'xsd' => 'http://www.w3.org/2001/XMLSchema#',
-    'foaf' => 'http://xmlns.com/foaf/0.1/',
-    'dcterms' => 'http://purl.org/dc/terms/',
-    'dbp' => 'http://dbpedia.org/property/',
-    'void' => 'http://rdfs.org/ns/void#',
-    'tag' => 'http://www.holygoat.co.uk/owl/redwood/0.1/tags/',
-    'skos' => 'http://www.w3.org/2004/02/skos/core#',
-    'ov' => 'http://open.vocab.org/terms/',
-);
 include_once('rdftemplating.inc.php');
-$engine = new TemplateEngine($namespaces);
+$engine = new TemplateEngine(
+    new LOD_Cloud_URI_Scheme($base),
+    array(
+        'void' => 'http://rdfs.org/ns/void#',
+        'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+        'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
+        'owl' => 'http://www.w3.org/2002/07/owl#',
+        'xsd' => 'http://www.w3.org/2001/XMLSchema#',
+        'foaf' => 'http://xmlns.com/foaf/0.1/',
+        'dcterms' => 'http://purl.org/dc/terms/',
+        'dbp' => 'http://dbpedia.org/property/',
+        'void' => 'http://rdfs.org/ns/void#',
+        'tag' => 'http://www.holygoat.co.uk/owl/redwood/0.1/tags/',
+        'skos' => 'http://www.w3.org/2004/02/skos/core#',
+        'ov' => 'http://open.vocab.org/terms/',
+    ));
+
 $engine->start_context('dump');
-
-// Create RDF metadata about the RDF document itself
-about($uris->dump());
-property('dcterms:title', 'The LOD Cloud diagram in RDF');
-property('dcterms:description', 'This file contains RDF descriptions of all RDF datasets in the LOD Cloud diagram, generated from metadata in the lodcloud group in CKAN, expressed using the voiD vocabulary.');
-property('dcterms:modified', date('c'), 'xsd:dateTime');
-rel('dcterms:publisher', $richard = 'http://richard.cyganiak.de/#me');
-rel('dcterms:license', 'http://creativecommons.org/publicdomain/zero/1.0/');
-rel('dcterms:source', 'http://ckan.net/group/lodcloud');
-rel('rdfs:seeAlso', $uris->home());
-rel('rdfs:seeAlso', 'http://rdfs.org/ns/void-guide');
-rel('foaf:depiction', 'http://richard.cyganiak.de/2007/10/lod/lod-datasets_2010-09-22.png');
-
-// Create RDF information about Richard
-about($richard, 'foaf:Person');
-property('foaf:name', 'Richard Cyganiak');
-rel('foaf:homepage', 'http://richard.cyganiak.de/');
-rel('foaf:mbox', 'mailto:richard@cyganiak.de');
-
-// Create RDF information about themes
-$engine->start_context('themes');
-about($uris->themes(), 'skos:ConceptScheme');
-property('skos:prefLabel', 'LOD Cloud Themes');
-foreach ($themes as $id => $theme) {
-  about($uris->theme($id), 'skos:Concept');
-  property('skos:prefLabel', $theme['label']);
-  property('skos:scopeNote', @$theme['note']);
-  rel('skos:inScheme', $uris->themes());
-}
-$engine->write_context_to_file('themes', "$dir/themes/index.ttl");
-
-// Create RDF information about licenses
-$engine->start_context('licenses');
-foreach ($licenses as $id => $license) {
-  about($uris->license($id));
-  property('rdfs:label', $license->title);
-  rel('foaf:page', $license->url);
-}
-$engine->write_context_to_file('licenses', "$dir/licenses/index.ttl");
-
-// Create RDF information about each dataset
+$engine->template('dump_metadata');
+$engine->template('themes', array('themes' => $themes, 'datasets' => $datasets), "$dir/themes/index.ttl");
+$engine->template('licenses', $licenses, "$dir/licenses/index.ttl");
 foreach ($datasets as $id => $dataset) {
-  $engine->start_context('dataset');
-
-  about($uris->dataset($id), 'void:Dataset');
-  property('dcterms:title', $dataset->title);
-  property('skos:altLabel', @$dataset->extras->shortname);
-  property('dcterms:description', $dataset->notes);
-  rel('foaf:homepage', $dataset->url);
-  rel('foaf:page', $dataset->ckan_url);
-  property('void:triples', @$dataset->extras->triples, 'xsd:integer');
-  rel('dcterms:license', $uris->license($dataset->license_id));
-  rel('dcterms:license', @$dataset->extras->license_link);
-  rel('void:sparqlEndpoint', $dataset->sparql);
-  foreach ($dataset->dumps as $dump) {
-    rel('void:dataDump', $dump['url']);
-  }
-  foreach ($dataset->examples as $example) {
-    rel('void:exampleResource', $example['url']);
-  }
-  foreach ($dataset->other_resources as $resource) {
-    rel('dcterms:relation', $resource['url']);
-  }
-  if ($dataset->ratings_count) {
-    property('ov:ratings_count', $dataset->ratings_count, 'xsd:integer');
-    property('ov:ratings_average', $dataset->ratings_average, 'xsd:decimal');
-  }
-  foreach ($dataset->contributors as $contributor) {
-    rel('dcterms:contributor', $uris->contributor($id, $contributor['role']));
-  }
-  foreach ($dataset->outlinks as $target => $link_count) {
-    rel('void:subset', $uris->linkset($id, $target));
-  }
-  foreach ($dataset->themes as $theme) {
-    rel('dcterms:subject', $uris->theme($theme));
-  }
-  foreach ($dataset->tags as $tag) {
-    rel('tag:taggedWithTag', $uris->tag($tag));
-  }
-  // Contributor details
-  foreach ($dataset->contributors as $contributor) {
-    about($uris->contributor($id, $contributor['role']));
-    property('rdfs:label', $contributor['name']);
-    if ($contributor['email']) {
-      rel('foaf:mbox', 'mailto:' . $contributor['email']);
-    }
-    rel('foaf:homepage', $contributor['homepage']);
-  }
-  // Linkset details
-  foreach ($dataset->outlinks as $target => $link_count) {
-    about($uris->linkset($id, $target), 'void:Linkset');
-    rel('void:target', $uris->dataset($id));
-    rel('void:target', $uris->dataset($target));
-    property('void:triples', $link_count, 'xsd:integer');
-  }
-  // Resource details (same structure for all kinds of resources)
-  $resources = array_merge($dataset->dumps, $dataset->examples, $dataset->other_resources);
-  foreach ($resources as $details) {
-    about($details['url']);
-    property("dcterms:description", $details['description']);
-    property("dcterms:format", $details['format']);
-  }
-
-  $engine->write_context_to_file('dataset', "$dir/$id.ttl");
+  $engine->template('dataset', array('id' => $id, 'dataset' => $dataset), "$dir/$id.ttl");
 }
-
-// Write dump
 $engine->write_context_to_file('dump', "$dir/data/void.ttl");
+$engine->end_context('dump');
 
 
 class LOD_Cloud_URI_Scheme {

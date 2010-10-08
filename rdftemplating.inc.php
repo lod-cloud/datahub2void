@@ -31,9 +31,11 @@ function rel($property, $uri) {
 class TemplateEngine {
   var $_contexts = array();
   var $_namespaces;
+  var $_uri_scheme;
 
-  function __construct($namespaces) {
+  function __construct($uri_scheme, $namespaces) {
     $this->_namespaces = $namespaces;
+    $this->_uri_scheme = $uri_scheme;
     global $___template_engine;
     $___template_engine = $this;
   }
@@ -55,11 +57,31 @@ class TemplateEngine {
     } else {
       $this->_contexts[$context]->to_turtle_file($filename);
     }
-    unset($this->_contexts[$context]);
     echo "OK\n";
+  }
+
+  function end_context($context) {
+    unset($this->_contexts[$context]);
   }
 
   function get_contexts() {
     return $this->_contexts;
+  }
+
+  function template($name, $data = null, $filename = null) {
+    if ($filename) {
+      $this->start_context($name);
+    }
+    if (is_array($data)) {
+      foreach ($data as $key => $value) {
+        $$key = $value;
+      }
+    }
+    $uris = $this->_uri_scheme;
+    include "templates/$name.inc.php";
+    if ($filename) {
+      $this->write_context_to_file($name, $filename);
+      $this->end_context($name);
+    }
   }
 }
