@@ -22,6 +22,24 @@ foreach ($group_description->packages as $package_id) {
   $datasets[$package->name] = $package;
 }
 
+// Themes
+$themes = array(
+  'media' => array('label' => 'Media'),
+  'geographic' => array('label' => 'Geography'),
+  'lifesciences' => array('label' => 'Life sciences'),
+  'publications' => array('label' => 'Publications',
+      'note' => 'Including library and museum data'),
+  'government' => array('label' => 'Government'),
+  'ecommerce' => array('label' => 'eCommerce'),
+  'socialweb' => array('label' => 'Social Web',
+      'note' => 'People and their activities'),
+  'usergeneratedcontent' => array('label' => 'User-generated content',
+      'note' => 'Blog posts, discussions, pictures, etc.'),
+  'schemata' => array('label' => 'Schemata',
+      'note' => 'Structural resources, including vocabularies, ontologies, classifications, thesauri'),
+  'crossdomain' => array('label' => 'Cross-domain'),
+);
+
 // Extracting linkset info from custom fields
 echo "Calculating linksets ... ";
 $linkset_count = 0;
@@ -49,6 +67,7 @@ echo "OK ($linkset_count linksets)\n";
 // Inspect resources to identify SPARQL endpoints, dumps, examples etc
 echo "Categorising resources ... ";
 foreach ($datasets as $package => $dataset) {
+  $datasets[$package]->sparql = null;
   $datasets[$package]->examples = array();
   $datasets[$package]->dumps = array();
   $datasets[$package]->other_resources = array();
@@ -59,18 +78,61 @@ foreach ($datasets as $package => $dataset) {
     $description = @$resource->description;
     if ($format == 'api/sparql') {
       $datasets[$package]->sparql = $url;
-    } else if ($format == 'example/rdf+xml') {
-      $datasets[$package]->examples[] = array($url, 'application/rdf+xml', $description);
+      continue;
+    }
+    $resource = array('url' => $url, 'format' => $format, 'description' => $description);
+    if ($format == 'example/rdf+xml') {
+      $resource['format'] = 'application/rdf+xml';
+      $datasets[$package]->examples[] = $resource;
     } else if ($format == 'example/turtle') {
-      $datasets[$package]->examples[] = array($url, 'text/turtle', $description);
+      $resource['format'] = 'text/turtle';
+      $datasets[$package]->examples[] = $resource;
     } else if ($format == 'example/ntriples') {
-      $datasets[$package]->examples[] = array($url, 'application/x-ntriples', $description);
+      $resource['format'] = 'application/x-ntriples';
+      $datasets[$package]->examples[] = $resource;
     } else if ($format == 'example/rdfa') {
-      $datasets[$package]->examples[] = array($url, 'text/html', $description);
+      $resource['format'] = 'application/text/html';
+      $datasets[$package]->examples[] = $resource;
     } else if ($format == 'application/rdf+xml' || $format == 'text/turtle' || $format == 'application/x-ntriples' || $format == 'application/x-nquads') {
-      $datasets[$package]->dumps[] = array($url, $format, $description);
+      $datasets[$package]->dumps[] = $resource;
     } else {
-      $datasets[$package]->other_resources[] = array($url, $format, $description);
+      $datasets[$package]->other_resources[] = $resource;
+    }
+  }
+}
+echo "OK\n";
+
+echo "Misc. dataset cleanup ... ";
+foreach ($datasets as $package => $dataset) {
+  // Licenses ... Work around broken data for RKB datasets
+  if (preg_match('/ /', $dataset->license_id) || $dataset->license_id == 'None') {
+    $datasets[$package]->license_id = null;
+  }
+  // Contributors (author, maintainer)
+  $datasets[$package]->contributors = array();
+  foreach (array('author', 'maintainer') as $role) {
+    $name = @$dataset->$role;
+    $email_var = $role . '_email';
+    $email = @$dataset->$email_var;
+    $homepage = null;
+    // homepage in email field?
+    if (preg_match('!^http://!', $email)) {
+      $homepage = $email;
+      $email = null;
+    }
+    // invalid email?
+    if (!preg_match('/^[a-zA-Z][\w\.-]*[a-zA-Z0-9]@[a-zA-Z0-9][\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]$/', $email)) {
+      $email = null;
+    }
+    if ($name || $email || $homepage) {
+      $datasets[$package]->contributors[] = array('role' => $role, 'name' => $name, 'email' => $email, 'homepage' => $homepage);
+    }
+  }
+  // Identify tags that are themes
+  $datasets[$package]->themes = array();
+  foreach ($dataset->tags as $tag) {
+    if (isset($themes[$tag])) {
+      $datasets[$package]->themes[] = $tag;
     }
   }
 }
@@ -83,20 +145,6 @@ foreach ($ckan_licenses as $license) {
   $licenses[$license->id] = $license;
 }
 echo "OK (" . count($licenses) . " licenses)\n";
-
-// Themes
-$themes = array(
-  'media' => array('Media'),
-  'geographic' => array('Geography'),
-  'lifesciences' => array('Life sciences'),
-  'publications' => array('Publications', 'Including library and museum data'),
-  'government' => array('Government'),
-  'ecommerce' => array('eCommerce'),
-  'socialweb' => array('Social Web', 'People and their activities'),
-  'usergeneratedcontent' => array('User-generated content', 'Blog posts, discussions, pictures, etc.'),
-  'schemata' => array('Schemata', 'Structural resources, including vocabularies, ontologies, classifications, thesauri'),
-  'crossdomain' => array('Cross-domain'),
-);
 
 // Prepare RDF writer
 $namespaces = array(
@@ -120,132 +168,114 @@ $uris = new LOD_Cloud_URI_Scheme($base, $dump_filename);
 
 // Create RDF metadata about the RDF document itself
 $richard = 'http://richard.cyganiak.de/#me';
-$out->triple_literal($uris->dump(), 'dcterms:title', 'The LOD Cloud diagram in RDF');
-$out->triple_literal($uris->dump(), 'dcterms:description', 'This file contains RDF descriptions of all RDF datasets in the LOD Cloud diagram, generated from metadata in the lodcloud group in CKAN, expressed using the voiD vocabulary.');
-$out->triple_literal($uris->dump(), 'dcterms:modified', date('c'), 'xsd:dateTime');
-$out->triple_uri($uris->dump(), 'dcterms:creator', $richard);
-$out->triple_uri($uris->dump(), 'dcterms:license', 'http://creativecommons.org/publicdomain/zero/1.0/');
-$out->triple_uri($uris->dump(), 'dcterms:source', 'http://ckan.net/group/lodcloud');
-$out->triple_uri($uris->dump(), 'rdfs:seeAlso', $uris->home());
-$out->triple_uri($uris->dump(), 'rdfs:seeAlso', 'http://rdfs.org/ns/void-guide');
-$out->triple_uri($uris->dump(), 'foaf:depiction', 'http://richard.cyganiak.de/2007/10/lod/lod-datasets_2010-09-22.png');
+$out->subject($uris->dump());
+$out->property_literal('dcterms:title', 'The LOD Cloud diagram in RDF');
+$out->property_literal('dcterms:description', 'This file contains RDF descriptions of all RDF datasets in the LOD Cloud diagram, generated from metadata in the lodcloud group in CKAN, expressed using the voiD vocabulary.');
+$out->property_literal('dcterms:modified', date('c'), 'xsd:dateTime');
+$out->property_uri('dcterms:creator', $richard);
+$out->property_uri('dcterms:license', 'http://creativecommons.org/publicdomain/zero/1.0/');
+$out->property_uri('dcterms:source', 'http://ckan.net/group/lodcloud');
+$out->property_uri('rdfs:seeAlso', $uris->home());
+$out->property_uri('rdfs:seeAlso', 'http://rdfs.org/ns/void-guide');
+$out->property_uri('foaf:depiction', 'http://richard.cyganiak.de/2007/10/lod/lod-datasets_2010-09-22.png');
 
 // Create RDF information about Richard
-$out->triple_qname($richard, 'a', 'foaf:Person');
-$out->triple_literal($richard, 'foaf:name', 'Richard Cyganiak');
-$out->triple_uri($richard, 'foaf:homepage', 'http://richard.cyganiak.de/');
-$out->triple_uri($richard, 'foaf:mbox', 'mailto:richard@cyganiak.de');
+$out->subject($richard);
+$out->property_qname('a', 'foaf:Person');
+$out->property_literal('foaf:name', 'Richard Cyganiak');
+$out->property_uri('foaf:homepage', 'http://richard.cyganiak.de/');
+$out->property_uri('foaf:mbox', 'mailto:richard@cyganiak.de');
 
 // Create RDF information about themes
-$out->triple_qname($uris->themes(), 'a', 'skos:ConceptScheme');
-$out->triple_literal($uris->themes(), 'skos:prefLabel', 'LOD Cloud Themes');
+$out->subject($uris->themes());
+$out->property_qname('a', 'skos:ConceptScheme');
+$out->property_literal('skos:prefLabel', 'LOD Cloud Themes');
 foreach ($themes as $id => $details) {
-  $out->triple_qname($uris->theme($id), 'a', 'skos:Concept');
-  $out->triple_literal($uris->theme($id), 'skos:prefLabel', $details[0]);
-  $out->triple_literal($uris->theme($id), 'skos:scopeNote', @$details[1]);
-  $out->triple_uri($uris->theme($id), 'skos:inScheme', $uris->themes());
+  $out->subject($uris->theme($id));
+  $out->property_qname('a', 'skos:Concept');
+  $out->property_literal('skos:prefLabel', $details['label']);
+  $out->property_literal('skos:scopeNote', @$details['note']);
+  $out->property_uri('skos:inScheme', $uris->themes());
 }
 
 // Create RDF information about licenses
 foreach ($licenses as $id => $details) {
-  $out->triple_literal($uris->license($id), 'rdfs:label', $details->title);
-  $out->triple_uri($uris->license($id), 'foaf:page', $details->url);
+  $out->subject($uris->license($id));
+  $out->property_literal('rdfs:label', $details->title);
+  $out->property_uri('foaf:page', $details->url);
 }
 
 // Create RDF information about each dataset
 foreach ($datasets as $key => $dataset) {
-  $ds = $uris->dataset($key);
-  $out->triple_qname($ds, 'a', 'void:Dataset');
-  $out->triple_literal($ds, 'dcterms:title', $dataset->title);
-  if (isset($dataset->extras->shortname)) {
-    $out->triple_literal($ds, 'skos:altLabel', $dataset->extras->shortname);
-  }
-  $out->triple_literal($ds, 'dcterms:description', $dataset->notes);
-  $out->triple_uri($ds, 'foaf:homepage', $dataset->url);
-  $out->triple_uri($ds, 'foaf:page', $dataset->ckan_url);
+  $out->subject($uris->dataset($key));
 
-  // Licenses ... Work around broken data for RKB datasets
-  if ($dataset->license_id && !preg_match('/ /', $dataset->license_id) && $dataset->license_id != 'None') {
-    $out->triple_uri($ds, 'dcterms:license', $uris->license($dataset->license_id));
-  }
-  if (isset($dataset->extras->license_link)) {
-    $out->triple_uri($ds, 'dcterms:license', $dataset->extras->license_link);
-  }
+  $out->property_qname('a', 'void:Dataset');
+  $out->property_literal('dcterms:title', $dataset->title);
+  $out->property_literal('skos:altLabel', @$dataset->extras->shortname);
+  $out->property_literal('dcterms:description', $dataset->notes);
+  $out->property_uri('foaf:homepage', $dataset->url);
+  $out->property_uri('foaf:page', $dataset->ckan_url);
+  $out->property_literal('void:triples', @$dataset->extras->triples, 'xsd:integer');
 
-  if (isset($dataset->extras->triples)) {
-    $out->triple_literal($ds, 'void:triples', $dataset->extras->triples, 'xsd:integer');
-  }
+  // Licenses
+  $out->property_uri('dcterms:license', $uris->license($dataset->license_id));
+  $out->property_uri('dcterms:license', @$dataset->extras->license_link);
+
   // Resources
-  if (isset($dataset->sparql)) {
-    $out->triple_uri($ds, 'void:sparqlEndpoint', $dataset->sparql);
-  }
+  $out->property_uri('void:sparqlEndpoint', $dataset->sparql);
   foreach ($dataset->dumps as $dump) {
-    $out->triple_uri($ds, 'void:dataDump', $dump[0]);
+    $out->property_uri('void:dataDump', $dump['url']);
   }
   foreach ($dataset->examples as $example) {
-    $out->triple_uri($ds, 'void:exampleResource', $example[0]);
+    $out->property_uri('void:exampleResource', $example['url']);
   }
   foreach ($dataset->other_resources as $resource) {
-    $out->triple_uri($ds, 'dcterms:relation', $resource[0]);
+    $out->property_uri('dcterms:relation', $resource['url']);
   }
+  // Ratings
   if ($dataset->ratings_count) {
-    $out->triple_literal($ds, 'ov:ratings_count', $dataset->ratings_count, 'xsd:integer');
-    $out->triple_literal($ds, 'ov:ratings_average', $dataset->ratings_average, 'xsd:decimal');
+    $out->property_literal('ov:ratings_count', $dataset->ratings_count, 'xsd:integer');
+    $out->property_literal('ov:ratings_average', $dataset->ratings_average, 'xsd:decimal');
   }
   // Author and maintainer
-  $out->triple_uri($ds, 'dcterms:contributor', $dataset->author ? $uris->author($key) : null);
-  $out->triple_uri($ds, 'dcterms:contributor', $dataset->maintainer ? $uris->maintainer($key) : null);
+  foreach ($dataset->contributors as $contributor) {
+    $out->property_uri('dcterms:contributor', $uris->contributor($key, $contributor['role']));
+  }
   // Linksets
   foreach ($dataset->outlinks as $target => $link_count) {
-    $out->triple_uri($ds, 'void:subset', $uris->linkset($key, $target));
+    $out->property_uri('void:subset', $uris->linkset($key, $target));
   }
   // Themes
-  foreach ($dataset->tags as $tag) {
-    if (!isset($themes[$tag])) continue;
-    $out->triple_uri($ds, 'dcterms:subject', $uris->theme($tag));
+  foreach ($dataset->themes as $theme) {
+    $out->property_uri('dcterms:subject', $uris->theme($theme));
   }
   // Tags
   foreach ($dataset->tags as $tag) {
-    $out->triple_uri($ds, 'tag:taggedWithTag', $uris->tag($tag));
+    $out->property_uri('tag:taggedWithTag', $uris->tag($tag));
   }
-  // Author details
-  if ($dataset->author) {
-    $uri = $uris->author($key);
-    $out->triple_literal($uri, 'rdfs:label', $dataset->author);
-    if ($dataset->author_email) {
-      if (preg_match('!^http://!', $dataset->author_email)) {
-        $out->triple_uri($uri, 'foaf:homepage', $dataset->author_email);
-      } else if (preg_match('/^[a-zA-Z][\w\.-]*[a-zA-Z0-9]@[a-zA-Z0-9][\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]$/', $dataset->author_email)) {
-        $out->triple_uri($uri, 'foaf:mbox', 'mailto:' . $dataset->author_email);
-      }
+  // Contributor details
+  foreach ($dataset->contributors as $contributor) {
+    $out->subject($uris->contributor($key, $contributor['role']));
+    $out->property_literal('rdfs:label', $contributor['name']);
+    if ($contributor['email']) {
+      $out->property_uri('foaf:mbox', 'mailto:' . $contributor['email']);
     }
-  }
-  // Maintainer details
-  if ($dataset->maintainer) {
-    $uri = $uris->maintainer($key);
-    $out->triple_literal($uri, 'rdfs:label', $dataset->maintainer);
-    if ($dataset->maintainer_email) {
-      if (preg_match('!^http://!', $dataset->maintainer_email)) {
-        $out->triple_uri($uri, 'foaf:homepage', $dataset->maintainer_email);
-      } else if (preg_match('/^[a-zA-Z][\w\.-]*[a-zA-Z0-9]@[a-zA-Z0-9][\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]$/', $dataset->maintainer_email)) {
-        $out->triple_uri($uri, 'foaf:mbox', 'mailto:' . $dataset->maintainer_email);
-      }
-    }
+    $out->property_uri('foaf:homepage', $contributor['homepage']);
   }
   // Linkset details
   foreach ($dataset->outlinks as $target => $link_count) {
-    $uri = $uris->linkset($key, $target);
-    $out->triple_qname($uri, 'a', 'void:Linkset');
-    $out->triple_uri($uri, 'void:target', $ds);
-    $out->triple_uri($uri, 'void:target', $base . $target);
-    $out->triple_literal($uri, 'void:triples', $link_count, 'xsd:integer');
+    $out->subject($uris->linkset($key, $target));
+    $out->property_qname('a', 'void:Linkset');
+    $out->property_uri('void:target', $uris->dataset($key));
+    $out->property_uri('void:target', $uris->dataset($target));
+    $out->property_literal('void:triples', $link_count, 'xsd:integer');
   }
   // Resource details (same structure for all kinds of resources)
   $resources = array_merge($dataset->dumps, $dataset->examples, $dataset->other_resources);
   foreach ($resources as $details) {
-    list($url, $format, $description) = $details;
-    $out->triple_literal($url, "dcterms:description", $description);
-    $out->triple_literal($url, "dcterms:format", $format);
+    $out->subject($details['url']);
+    $out->property_literal("dcterms:description", $details['description']);
+    $out->property_literal("dcterms:format", $details['format']);
   }
 }
 
@@ -268,10 +298,9 @@ class LOD_Cloud_URI_Scheme {
   function dump() { return $this->_base . 'data/' . $this->_dump_filename; }
   function dataset($id) { return $this->_base . $this->_escape($id); }
   function linkset($source_id, $target_id) { return $this->dataset($source_id) . '/links/' . $this->_escape($target_id); }
-  function author($dataset_id) { return $this->dataset($dataset_id) . '/author'; }
-  function maintainer($dataset_id) { return $this->dataset($dataset_id) . '/maintainer'; }
+  function contributor($dataset_id, $role) { return $this->dataset($dataset_id) . '/' . $role; }
   function licenses() { return $this->_base . 'licenses'; }
-  function license($id) { return $this->licenses() . '/' . $this->_escape($id); }
+  function license($id) { if (!$id) return null; return $this->licenses() . '/' . $this->_escape($id); }
   function themes() { return $this->_base . 'themes'; }
   function theme($id) { return $this->themes() . '/' . $this->_escape($id); }
   function tags() { return $this->_base . 'tags'; }

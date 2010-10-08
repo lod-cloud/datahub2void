@@ -12,6 +12,7 @@ ARC2::inc('RDFXMLSerializer');
 class RDFWriter {
   var $_namespaces = array();
   var $_triples = array();
+  var $_current_subject = null;
 
   function __construct($namespaces = array()) {
     foreach ($namespaces as $prefix => $uri) {
@@ -31,6 +32,22 @@ class RDFWriter {
   function register_namespace($prefix, $uri) {
     if (in_array($uri, $this->_namespaces)) return;
     $this->_namespaces[$prefix] = $uri;
+  }
+
+  function subject($uri) {
+    $this->_current_subject = $uri;
+  }
+
+  function property_literal($p, $o, $type = null) {
+    $this->triple_literal($this->_current_subject, $p, $o, $type);
+  }
+
+  function property_uri($p, $o) {
+    $this->triple_uri($this->_current_subject, $p, $o);
+  }
+
+  function property_qname($p, $o) {
+    $this->triple_qname($this->_current_subject, $p, $o);
   }
 
   function triple_literal($s, $p, $o, $type = null) {
