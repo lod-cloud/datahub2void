@@ -167,18 +167,16 @@ $namespaces = array(
     'skos' => 'http://www.w3.org/2004/02/skos/core#',
     'ov' => 'http://open.vocab.org/terms/',
 );
-include_once('rdfwriter.inc.php');
 include_once('rdftemplating.inc.php');
-mkdir($dir);
-$dump_context = new RDFWriter($namespaces);
-add_triple_destination($dump_context);
+$engine = new TemplateEngine($namespaces);
+$engine->start_context('dump');
 
 // Create RDF metadata about the RDF document itself
 about($uris->dump());
 property('dcterms:title', 'The LOD Cloud diagram in RDF');
 property('dcterms:description', 'This file contains RDF descriptions of all RDF datasets in the LOD Cloud diagram, generated from metadata in the lodcloud group in CKAN, expressed using the voiD vocabulary.');
 property('dcterms:modified', date('c'), 'xsd:dateTime');
-rel('dcterms:creator', $richard = 'http://richard.cyganiak.de/#me');
+rel('dcterms:publisher', $richard = 'http://richard.cyganiak.de/#me');
 rel('dcterms:license', 'http://creativecommons.org/publicdomain/zero/1.0/');
 rel('dcterms:source', 'http://ckan.net/group/lodcloud');
 rel('rdfs:seeAlso', $uris->home());
@@ -192,9 +190,7 @@ rel('foaf:homepage', 'http://richard.cyganiak.de/');
 rel('foaf:mbox', 'mailto:richard@cyganiak.de');
 
 // Create RDF information about themes
-$themes_context = new RDFWriter($namespaces);
-add_triple_destination($themes_context);
-
+$engine->start_context('themes');
 about($uris->themes(), 'skos:ConceptScheme');
 property('skos:prefLabel', 'LOD Cloud Themes');
 foreach ($themes as $id => $theme) {
@@ -203,27 +199,20 @@ foreach ($themes as $id => $theme) {
   property('skos:scopeNote', @$theme['note']);
   rel('skos:inScheme', $uris->themes());
 }
-remove_triple_destination($themes_context);
-mkdir("$dir/themes");
-write_turtle($themes_context, "$dir/themes/index.ttl");
+$engine->write_context_to_file('themes', "$dir/themes/index.ttl");
 
 // Create RDF information about licenses
-$licenses_context = new RDFWriter($namespaces);
-add_triple_destination($licenses_context);
-
+$engine->start_context('licenses');
 foreach ($licenses as $id => $license) {
   about($uris->license($id));
   property('rdfs:label', $license->title);
   rel('foaf:page', $license->url);
 }
-remove_triple_destination($licenses_context);
-mkdir("$dir/licenses");
-write_turtle($licenses_context, "$dir/licenses/index.ttl");
+$engine->write_context_to_file('licenses', "$dir/licenses/index.ttl");
 
 // Create RDF information about each dataset
 foreach ($datasets as $id => $dataset) {
-  $dataset_context = new RDFWriter($namespaces);
-  add_triple_destination($dataset_context);
+  $engine->start_context('dataset');
 
   about($uris->dataset($id), 'void:Dataset');
   property('dcterms:title', $dataset->title);
@@ -284,20 +273,11 @@ foreach ($datasets as $id => $dataset) {
     property("dcterms:format", $details['format']);
   }
 
-  remove_triple_destination($dataset_context);
-  write_turtle($dataset_context, "$dir/$id.ttl");
+  $engine->write_context_to_file('dataset', "$dir/$id.ttl");
 }
 
 // Write dump
-remove_triple_destination($dump_context);
-mkdir("$dir/data");
-write_turtle($dump_context, "$dir/data/void.ttl");
-
-function write_turtle($context, $filename) {
-  echo "Writing $filename ... ";
-  $context->to_turtle_file($filename);
-  echo "OK\n";
-}
+$engine->write_context_to_file('dump', "$dir/data/void.ttl");
 
 
 class LOD_Cloud_URI_Scheme {
