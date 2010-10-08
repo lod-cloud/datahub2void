@@ -2,8 +2,11 @@ WHAT THIS IS
 
 This project is about generating a voiD description of all the datasets
 in the LOD Cloud diagram. It currently generates an RDF dump containing
-these descriptions. The plan is to publish the data in that dump in
-linked data format as well.
+these descriptions, available online here:
+
+   http://lod-cloud.net/data/void.ttl
+
+The plan is to publish that dump in linked data format as well.
 
 
 BACKGROUND
@@ -38,14 +41,16 @@ DETAILS
 This uses Ckan_Client-PHP for accessing the CKAN API.
 
 This uses some code taken from Neologism and DBpedia to serialize
-Turtle via ARC2. This rdfwriter code offers a nicer API, fixes
-some bugs related to literal serialization in ARC2's TurtleSerializer,
-and tweaks the layout of the produced Turtle to provide (subjectively)
-nicer-looking Turtle output.
+Turtle via ARC2. This code is found in rdfwriter.inc.php. The class
+offers an API that's a bit nicer than ARC2's triple representation,
+it fixes some bugs related to literal serialization in ARC2's
+TurtleSerializer, and tweaks the layout of the produced Turtle to
+provide (subjectively) nicer-looking Turtle output.
 
 
 TODO
 
+- update the RDF dump via cronjob
 - publish the generated RDF somewhere as linked data
 - better validation for URIs, triple numbers, etc
 - create the two ov: terms I used at open.vocab.org
