@@ -149,8 +149,8 @@ foreach ($themes as $id => $details) {
 
 // Create RDF information about licenses
 foreach ($licenses as $id => $details) {
-  $out->triple_literal($base . 'license/' . $id, 'rdfs:label', $details->title);
-  $out->triple_literal($base . 'license/' . $id, 'foaf:page', $details->url);
+  $out->triple_literal($base . 'licenses/' . $id, 'rdfs:label', $details->title);
+  $out->triple_literal($base . 'licenses/' . $id, 'foaf:page', $details->url);
 }
 
 // Create RDF information about each dataset
@@ -167,7 +167,7 @@ foreach ($datasets as $key => $dataset) {
 
   // Licenses ... Work around broken data for RKB datasets
   if ($dataset->license_id && !preg_match('/ /', $dataset->license_id) && $dataset->license_id != 'None') {
-    $out->triple_uri($ds, 'dcterms:license', $base . 'license/' . $dataset->license_id);
+    $out->triple_uri($ds, 'dcterms:license', $base . 'licenses/' . $dataset->license_id);
   }
   if (isset($dataset->extras->license_link)) {
     $out->triple_uri($ds, 'dcterms:license', $dataset->extras->license_link);
@@ -207,7 +207,7 @@ foreach ($datasets as $key => $dataset) {
   }
   // Tags
   foreach ($dataset->tags as $tag) {
-    $out->triple_uri($ds, 'tag:taggedWithTag', $base . 'tag/' . $tag);
+    $out->triple_uri($ds, 'tag:taggedWithTag', $base . 'tags/' . $tag);
   }
   // Author details
   if ($dataset->author) {
