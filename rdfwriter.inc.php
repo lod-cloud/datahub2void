@@ -9,7 +9,7 @@ ARC2::inc('RDFXMLSerializer');
  * has its own namespace management, and provides a convenient API for
  * generating RDF statements.
  */
-class NeologismRDFWriter {
+class RDFWriter {
   var $_namespaces = array();
   var $_triples = array();
 
@@ -63,28 +63,24 @@ class NeologismRDFWriter {
     return $this->_namespaces[$prefix] . $local;
   }
 
-  function write_rdfxml() {
-    drupal_set_header("Content-Type: application/rdf+xml; charset=utf-8");
-    module_load_include('inc', 'neologism', 'neologism.arc');
+  function get_rdfxml() {
     $ser = ARC2::getRDFXMLSerializer(array('ns' => $this->_namespaces, 'serializer_type_nodes' => true));
-    echo $ser->getSerializedTriples($this->_triples);
+    return $ser->getSerializedTriples($this->_triples);
   }
 
-  function write_n3() {
-    drupal_set_header("Content-Type: text/rdf+n3; charset=utf-8");
-    module_load_include('inc', 'neologism', 'neologism.arc');
-    $ser = new NeologismTurtleSerializer($this->_namespaces);
-    echo $ser->getSerializedTriples($this->_triples);
+  function get_turtle() {
+    $ser = new BetterTurtleSerializer($this->_namespaces);
+    return $ser->getSerializedTriples($this->_triples);
   }
 }
 
 /**
  * A customized Turtle serializer, based on the one inculded in ARC2.
  * It uses slightly different rules for compressing URIs into QNames,
- * to make more pleasing output. We keep it in a separate include file
- * to avoid having to include ARC2.php all the time.
+ * to make more pleasing output; and fixes some issues with literal
+ * escaping.
  */
-class NeologismTurtleSerializer extends ARC2_TurtleSerializer {
+class BetterTurtleSerializer extends ARC2_TurtleSerializer {
 
   function __construct($namespaces) {
     parent::__construct(array('ns' => $namespaces), new stdClass());
@@ -112,7 +108,7 @@ class NeologismTurtleSerializer extends ARC2_TurtleSerializer {
         && (is_numeric($v['value']) || preg_match('/^[-+e0-9.]+$/', $v['value']))) return (string)$v['value'];
       $suffix = isset($v['lang']) && $v['lang'] ? '@' . $v['lang'] : '';
       $suffix = isset($v['datatype']) && $v['datatype'] ? '^^' . $this->getTerm($v['datatype'], 'dt') : $suffix;
-      return NeologismTurtleSerializer::quote($v['value']) . $suffix;
+      return BetterTurtleSerializer::quote($v['value']) . $suffix;
     }
     return parent::getTerm($v, $term, $qualifier);
   }
@@ -158,10 +154,10 @@ class NeologismTurtleSerializer extends ARC2_TurtleSerializer {
     if (preg_match("/[\\x0A\\x0D]/", $str)) {
       return '"""' . preg_replace_callback(
           "/[\\x00-\\x09\\x0B\\x0C\\x0E-\\x1F\\x22\\x5C\\x7F]|[\\x80-\\xBF]|[\\xC0-\\xFF][\\x80-\\xBF]*/",
-          array('NeologismTurtleSerializer', 'escape_callback'),
+          array('BetterTurtleSerializer', 'escape_callback'),
           $str) . '"""';
     } else {
-      return '"' . NeologismTurtleSerializer::escape($str) . '"';
+      return '"' . BetterTurtleSerializer::escape($str) . '"';
     }
   }
 
@@ -193,7 +189,7 @@ class NeologismTurtleSerializer extends ARC2_TurtleSerializer {
     // callback.
     return preg_replace_callback(
         "/[\\x00-\\x1F\\x22\\x5C\\x7F]|[\\x80-\\xBF]|[\\xC0-\\xFF][\\x80-\\xBF]*/",
-        array('NeologismTurtleSerializer', 'escape_callback'),
+        array('BetterTurtleSerializer', 'escape_callback'),
         $str);
   }
 
@@ -213,7 +209,7 @@ class NeologismTurtleSerializer extends ARC2_TurtleSerializer {
     // Multi-byte characters
     if ($byte < 0xC0) {
       // Continuation bytes (0x80-0xBF) are not allowed to appear as first byte
-      return NeologismTurtleSerializer::error_character;
+      return BetterTurtleSerializer::error_character;
     }
     if ($byte < 0xE0) { // 110xxxxx, hex C0-DF
       $bytes = 2;
@@ -231,15 +227,15 @@ class NeologismTurtleSerializer extends ARC2_TurtleSerializer {
       $bytes = 6;
       $codepoint = $byte & 0x01;
     } else { // 11111110 and 11111111, hex FE-FF, are not allowed
-      return NeologismTurtleSerializer::error_character;
+      return BetterTurtleSerializer::error_character;
     }
     // Verify correct number of continuation bytes (0x80 to 0xBF)
     $length = strlen($encoded_character);
     if ($length < $bytes) { // not enough continuation bytes
-      return NeologismTurtleSerializer::error_character;
+      return BetterTurtleSerializer::error_character;
     }
     if ($length > $bytes) { // Too many continuation bytes -- show each as one error
-      $rest = str_repeat(NeologismTurtleSerializer::error_character, $length - $bytes);
+      $rest = str_repeat(BetterTurtleSerializer::error_character, $length - $bytes);
     } else {
       $rest = '';
     }
@@ -257,15 +253,15 @@ class NeologismTurtleSerializer extends ARC2_TurtleSerializer {
       ($bytes == 4 && $codepoint <= 0xFFFF) ||
       ($bytes == 5 && $codepoint <= 0x1FFFFF) ||
       ($bytes == 6 && $codepoint <= 0x3FFFFF)) {
-      return NeologismTurtleSerializer::error_character . $rest;
+      return BetterTurtleSerializer::error_character . $rest;
     }
     // Check for UTF-16 surrogates, which must not be used in UTF-8
     if ($codepoint >= 0xD800 && $codepoint <= 0xDFFF) {
-      return NeologismTurtleSerializer::error_character . $rest;
+      return BetterTurtleSerializer::error_character . $rest;
     }
     // Misc. illegal code positions
     if ($codepoint == 0xFFFE || $codepoint == 0xFFFF) {
-      return NeologismTurtleSerializer::error_character . $rest;
+      return BetterTurtleSerializer::error_character . $rest;
     }
     if ($codepoint <= 0xFFFF) {
       // 0x0100-0xFFFF, encode as \uXXXX
@@ -281,6 +277,6 @@ class NeologismTurtleSerializer extends ARC2_TurtleSerializer {
     }
     // Unicode codepoint above 0x10FFFF, no characters have been assigned
     // to those codepoints
-    return NeologismTurtleSerializer::error_character . $rest;
+    return BetterTurtleSerializer::error_character . $rest;
   }
 }

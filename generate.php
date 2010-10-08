@@ -101,8 +101,8 @@ $themes = array(
 
 // Prepare RDF writer
 include_once('rdfwriter.inc.php');
-$out = new NeologismRDFWriter();
-$out->register_namespace('void', '');
+$out = new RDFWriter();
+$out->register_namespace('void', 'http://rdfs.org/ns/void#');
 $out->register_namespace('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 $out->register_namespace('rdfs', 'http://www.w3.org/2000/01/rdf-schema#');
 $out->register_namespace('owl', 'http://www.w3.org/2002/07/owl#');
@@ -247,8 +247,7 @@ foreach ($datasets as $key => $dataset) {
 }
 
 // Serialize to Turtle
-$ser = new NeologismTurtleSerializer($out->_namespaces);
-$rdf = $ser->getSerializedTriples($out->_triples);
+$rdf = $out->get_turtle();
 
 // Write to file
 echo "Writing to file $filename ... ";
