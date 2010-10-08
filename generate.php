@@ -126,7 +126,7 @@ $out->triple_literal($uris->dump(), 'dcterms:modified', date('c'), 'xsd:dateTime
 $out->triple_uri($uris->dump(), 'dcterms:creator', $richard);
 $out->triple_uri($uris->dump(), 'dcterms:license', 'http://creativecommons.org/publicdomain/zero/1.0/');
 $out->triple_uri($uris->dump(), 'dcterms:source', 'http://ckan.net/group/lodcloud');
-$out->triple_uri($uris->dump(), 'rdfs:seeAlso', $base);
+$out->triple_uri($uris->dump(), 'rdfs:seeAlso', $uris->home());
 $out->triple_uri($uris->dump(), 'rdfs:seeAlso', 'http://rdfs.org/ns/void-guide');
 $out->triple_uri($uris->dump(), 'foaf:depiction', 'http://richard.cyganiak.de/2007/10/lod/lod-datasets_2010-09-22.png');
 
@@ -264,6 +264,7 @@ class LOD_Cloud_URI_Scheme {
     $this->_dump_filename = $dump_filename;
   }
 
+  function home() { return $this->_base; }
   function dump() { return $this->_base . 'data/' . $this->_dump_filename; }
   function dataset($id) { return $this->_base . $this->_escape($id); }
   function linkset($source_id, $target_id) { return $this->dataset($source_id) . '/links/' . $this->_escape($target_id); }
