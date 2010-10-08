@@ -146,6 +146,8 @@ foreach ($ckan_licenses as $license) {
 }
 echo "OK (" . count($licenses) . " licenses)\n";
 
+$uris = new LOD_Cloud_URI_Scheme($base, $dump_filename);
+
 // Prepare RDF writer
 $namespaces = array(
     'void' => 'http://rdfs.org/ns/void#',
@@ -162,120 +164,104 @@ $namespaces = array(
     'ov' => 'http://open.vocab.org/terms/',
 );
 include_once('rdfwriter.inc.php');
+include_once('rdftemplating.inc.php');
 $out = new RDFWriter($namespaces);
-
-$uris = new LOD_Cloud_URI_Scheme($base, $dump_filename);
+triple_destination($out);
 
 // Create RDF metadata about the RDF document itself
-$richard = 'http://richard.cyganiak.de/#me';
-$out->subject($uris->dump());
-$out->property_literal('dcterms:title', 'The LOD Cloud diagram in RDF');
-$out->property_literal('dcterms:description', 'This file contains RDF descriptions of all RDF datasets in the LOD Cloud diagram, generated from metadata in the lodcloud group in CKAN, expressed using the voiD vocabulary.');
-$out->property_literal('dcterms:modified', date('c'), 'xsd:dateTime');
-$out->property_uri('dcterms:creator', $richard);
-$out->property_uri('dcterms:license', 'http://creativecommons.org/publicdomain/zero/1.0/');
-$out->property_uri('dcterms:source', 'http://ckan.net/group/lodcloud');
-$out->property_uri('rdfs:seeAlso', $uris->home());
-$out->property_uri('rdfs:seeAlso', 'http://rdfs.org/ns/void-guide');
-$out->property_uri('foaf:depiction', 'http://richard.cyganiak.de/2007/10/lod/lod-datasets_2010-09-22.png');
+about($uris->dump());
+property('dcterms:title', 'The LOD Cloud diagram in RDF');
+property('dcterms:description', 'This file contains RDF descriptions of all RDF datasets in the LOD Cloud diagram, generated from metadata in the lodcloud group in CKAN, expressed using the voiD vocabulary.');
+property('dcterms:modified', date('c'), 'xsd:dateTime');
+rel('dcterms:creator', $richard = 'http://richard.cyganiak.de/#me');
+rel('dcterms:license', 'http://creativecommons.org/publicdomain/zero/1.0/');
+rel('dcterms:source', 'http://ckan.net/group/lodcloud');
+rel('rdfs:seeAlso', $uris->home());
+rel('rdfs:seeAlso', 'http://rdfs.org/ns/void-guide');
+rel('foaf:depiction', 'http://richard.cyganiak.de/2007/10/lod/lod-datasets_2010-09-22.png');
 
 // Create RDF information about Richard
-$out->subject($richard);
-$out->property_qname('a', 'foaf:Person');
-$out->property_literal('foaf:name', 'Richard Cyganiak');
-$out->property_uri('foaf:homepage', 'http://richard.cyganiak.de/');
-$out->property_uri('foaf:mbox', 'mailto:richard@cyganiak.de');
+about($richard, 'foaf:Person');
+property('foaf:name', 'Richard Cyganiak');
+rel('foaf:homepage', 'http://richard.cyganiak.de/');
+rel('foaf:mbox', 'mailto:richard@cyganiak.de');
 
 // Create RDF information about themes
-$out->subject($uris->themes());
-$out->property_qname('a', 'skos:ConceptScheme');
-$out->property_literal('skos:prefLabel', 'LOD Cloud Themes');
-foreach ($themes as $id => $details) {
-  $out->subject($uris->theme($id));
-  $out->property_qname('a', 'skos:Concept');
-  $out->property_literal('skos:prefLabel', $details['label']);
-  $out->property_literal('skos:scopeNote', @$details['note']);
-  $out->property_uri('skos:inScheme', $uris->themes());
+about($uris->themes(), 'skos:ConceptScheme');
+property('skos:prefLabel', 'LOD Cloud Themes');
+foreach ($themes as $id => $theme) {
+  about($uris->theme($id), 'skos:Concept');
+  property('skos:prefLabel', $theme['label']);
+  property('skos:scopeNote', @$theme['note']);
+  rel('skos:inScheme', $uris->themes());
 }
 
 // Create RDF information about licenses
-foreach ($licenses as $id => $details) {
-  $out->subject($uris->license($id));
-  $out->property_literal('rdfs:label', $details->title);
-  $out->property_uri('foaf:page', $details->url);
+foreach ($licenses as $id => $license) {
+  about($uris->license($id));
+  property('rdfs:label', $license->title);
+  rel('foaf:page', $license->url);
 }
 
 // Create RDF information about each dataset
-foreach ($datasets as $key => $dataset) {
-  $out->subject($uris->dataset($key));
-
-  $out->property_qname('a', 'void:Dataset');
-  $out->property_literal('dcterms:title', $dataset->title);
-  $out->property_literal('skos:altLabel', @$dataset->extras->shortname);
-  $out->property_literal('dcterms:description', $dataset->notes);
-  $out->property_uri('foaf:homepage', $dataset->url);
-  $out->property_uri('foaf:page', $dataset->ckan_url);
-  $out->property_literal('void:triples', @$dataset->extras->triples, 'xsd:integer');
-
-  // Licenses
-  $out->property_uri('dcterms:license', $uris->license($dataset->license_id));
-  $out->property_uri('dcterms:license', @$dataset->extras->license_link);
-
-  // Resources
-  $out->property_uri('void:sparqlEndpoint', $dataset->sparql);
+foreach ($datasets as $id => $dataset) {
+  about($uris->dataset($id), 'void:Dataset');
+  property('dcterms:title', $dataset->title);
+  property('skos:altLabel', @$dataset->extras->shortname);
+  property('dcterms:description', $dataset->notes);
+  rel('foaf:homepage', $dataset->url);
+  rel('foaf:page', $dataset->ckan_url);
+  property('void:triples', @$dataset->extras->triples, 'xsd:integer');
+  rel('dcterms:license', $uris->license($dataset->license_id));
+  rel('dcterms:license', @$dataset->extras->license_link);
+  rel('void:sparqlEndpoint', $dataset->sparql);
   foreach ($dataset->dumps as $dump) {
-    $out->property_uri('void:dataDump', $dump['url']);
+    rel('void:dataDump', $dump['url']);
   }
   foreach ($dataset->examples as $example) {
-    $out->property_uri('void:exampleResource', $example['url']);
+    rel('void:exampleResource', $example['url']);
   }
   foreach ($dataset->other_resources as $resource) {
-    $out->property_uri('dcterms:relation', $resource['url']);
+    rel('dcterms:relation', $resource['url']);
   }
-  // Ratings
   if ($dataset->ratings_count) {
-    $out->property_literal('ov:ratings_count', $dataset->ratings_count, 'xsd:integer');
-    $out->property_literal('ov:ratings_average', $dataset->ratings_average, 'xsd:decimal');
+    property('ov:ratings_count', $dataset->ratings_count, 'xsd:integer');
+    property('ov:ratings_average', $dataset->ratings_average, 'xsd:decimal');
   }
-  // Author and maintainer
   foreach ($dataset->contributors as $contributor) {
-    $out->property_uri('dcterms:contributor', $uris->contributor($key, $contributor['role']));
+    rel('dcterms:contributor', $uris->contributor($id, $contributor['role']));
   }
-  // Linksets
   foreach ($dataset->outlinks as $target => $link_count) {
-    $out->property_uri('void:subset', $uris->linkset($key, $target));
+    rel('void:subset', $uris->linkset($id, $target));
   }
-  // Themes
   foreach ($dataset->themes as $theme) {
-    $out->property_uri('dcterms:subject', $uris->theme($theme));
+    rel('dcterms:subject', $uris->theme($theme));
   }
-  // Tags
   foreach ($dataset->tags as $tag) {
-    $out->property_uri('tag:taggedWithTag', $uris->tag($tag));
+    rel('tag:taggedWithTag', $uris->tag($tag));
   }
   // Contributor details
   foreach ($dataset->contributors as $contributor) {
-    $out->subject($uris->contributor($key, $contributor['role']));
-    $out->property_literal('rdfs:label', $contributor['name']);
+    about($uris->contributor($id, $contributor['role']));
+    property('rdfs:label', $contributor['name']);
     if ($contributor['email']) {
-      $out->property_uri('foaf:mbox', 'mailto:' . $contributor['email']);
+      rel('foaf:mbox', 'mailto:' . $contributor['email']);
     }
-    $out->property_uri('foaf:homepage', $contributor['homepage']);
+    rel('foaf:homepage', $contributor['homepage']);
   }
   // Linkset details
   foreach ($dataset->outlinks as $target => $link_count) {
-    $out->subject($uris->linkset($key, $target));
-    $out->property_qname('a', 'void:Linkset');
-    $out->property_uri('void:target', $uris->dataset($key));
-    $out->property_uri('void:target', $uris->dataset($target));
-    $out->property_literal('void:triples', $link_count, 'xsd:integer');
+    about($uris->linkset($id, $target), 'void:Linkset');
+    rel('void:target', $uris->dataset($id));
+    rel('void:target', $uris->dataset($target));
+    property('void:triples', $link_count, 'xsd:integer');
   }
   // Resource details (same structure for all kinds of resources)
   $resources = array_merge($dataset->dumps, $dataset->examples, $dataset->other_resources);
   foreach ($resources as $details) {
-    $out->subject($details['url']);
-    $out->property_literal("dcterms:description", $details['description']);
-    $out->property_literal("dcterms:format", $details['format']);
+    about($details['url']);
+    property("dcterms:description", $details['description']);
+    property("dcterms:format", $details['format']);
   }
 }
 
