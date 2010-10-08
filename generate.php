@@ -2,8 +2,7 @@
 
 //$debug_maxdatasets = 5;
 $base = 'http://lod-cloud.net/';
-$filename = 'void.ttl';
-$fileurl = $base . 'data/' . $filename;
+$dump_filename = 'void.ttl';
 
 @ini_set('error_reporting', E_ALL);
 
@@ -117,17 +116,19 @@ $namespaces = array(
 include_once('rdfwriter.inc.php');
 $out = new RDFWriter($namespaces);
 
+$uris = new LOD_Cloud_URI_Scheme($base, $dump_filename);
+
 // Create RDF metadata about the RDF document itself
 $richard = 'http://richard.cyganiak.de/#me';
-$out->triple_literal($fileurl, 'dcterms:title', 'The LOD Cloud diagram in RDF');
-$out->triple_literal($fileurl, 'dcterms:description', 'This file contains RDF descriptions of all RDF datasets in the LOD Cloud diagram, generated from metadata in the lodcloud group in CKAN, expressed using the voiD vocabulary.');
-$out->triple_literal($fileurl, 'dcterms:modified', date('c'), 'xsd:dateTime');
-$out->triple_uri($fileurl, 'dcterms:creator', $richard);
-$out->triple_uri($fileurl, 'dcterms:license', 'http://creativecommons.org/publicdomain/zero/1.0/');
-$out->triple_uri($fileurl, 'dcterms:source', 'http://ckan.net/group/lodcloud');
-$out->triple_uri($fileurl, 'rdfs:seeAlso', $base);
-$out->triple_uri($fileurl, 'rdfs:seeAlso', 'http://rdfs.org/ns/void-guide');
-$out->triple_uri($fileurl, 'foaf:depiction', 'http://richard.cyganiak.de/2007/10/lod/lod-datasets_2010-09-22.png');
+$out->triple_literal($uris->dump(), 'dcterms:title', 'The LOD Cloud diagram in RDF');
+$out->triple_literal($uris->dump(), 'dcterms:description', 'This file contains RDF descriptions of all RDF datasets in the LOD Cloud diagram, generated from metadata in the lodcloud group in CKAN, expressed using the voiD vocabulary.');
+$out->triple_literal($uris->dump(), 'dcterms:modified', date('c'), 'xsd:dateTime');
+$out->triple_uri($uris->dump(), 'dcterms:creator', $richard);
+$out->triple_uri($uris->dump(), 'dcterms:license', 'http://creativecommons.org/publicdomain/zero/1.0/');
+$out->triple_uri($uris->dump(), 'dcterms:source', 'http://ckan.net/group/lodcloud');
+$out->triple_uri($uris->dump(), 'rdfs:seeAlso', $base);
+$out->triple_uri($uris->dump(), 'rdfs:seeAlso', 'http://rdfs.org/ns/void-guide');
+$out->triple_uri($uris->dump(), 'foaf:depiction', 'http://richard.cyganiak.de/2007/10/lod/lod-datasets_2010-09-22.png');
 
 // Create RDF information about Richard
 $out->triple_qname($richard, 'a', 'foaf:Person');
@@ -136,26 +137,24 @@ $out->triple_uri($richard, 'foaf:homepage', 'http://richard.cyganiak.de/');
 $out->triple_uri($richard, 'foaf:mbox', 'mailto:richard@cyganiak.de');
 
 // Create RDF information about themes
-$scheme_uri = $base . 'themes';
-$out->triple_qname($scheme_uri, 'a', 'skos:ConceptScheme');
-$out->triple_literal($scheme_uri, 'skos:prefLabel', 'LOD Cloud Themes');
+$out->triple_qname($uris->themes(), 'a', 'skos:ConceptScheme');
+$out->triple_literal($uris->themes(), 'skos:prefLabel', 'LOD Cloud Themes');
 foreach ($themes as $id => $details) {
-  $theme_uri = $scheme_uri . '/' . $id;
-  $out->triple_qname($theme_uri, 'a', 'skos:Concept');
-  $out->triple_literal($theme_uri, 'skos:prefLabel', $details[0]);
-  $out->triple_literal($theme_uri, 'skos:scopeNote', @$details[1]);
-  $out->triple_uri($theme_uri, 'skos:inScheme', $scheme_uri);
+  $out->triple_qname($uris->theme($id), 'a', 'skos:Concept');
+  $out->triple_literal($uris->theme($id), 'skos:prefLabel', $details[0]);
+  $out->triple_literal($uris->theme($id), 'skos:scopeNote', @$details[1]);
+  $out->triple_uri($uris->theme($id), 'skos:inScheme', $uris->themes());
 }
 
 // Create RDF information about licenses
 foreach ($licenses as $id => $details) {
-  $out->triple_literal($base . 'licenses/' . $id, 'rdfs:label', $details->title);
-  $out->triple_literal($base . 'licenses/' . $id, 'foaf:page', $details->url);
+  $out->triple_literal($uris->license($id), 'rdfs:label', $details->title);
+  $out->triple_literal($uris->license($id), 'foaf:page', $details->url);
 }
 
 // Create RDF information about each dataset
 foreach ($datasets as $key => $dataset) {
-  $ds = $base . $key;
+  $ds = $uris->dataset($key);
   $out->triple_qname($ds, 'a', 'void:Dataset');
   $out->triple_literal($ds, 'dcterms:title', $dataset->title);
   if (isset($dataset->extras->shortname)) {
@@ -167,7 +166,7 @@ foreach ($datasets as $key => $dataset) {
 
   // Licenses ... Work around broken data for RKB datasets
   if ($dataset->license_id && !preg_match('/ /', $dataset->license_id) && $dataset->license_id != 'None') {
-    $out->triple_uri($ds, 'dcterms:license', $base . 'licenses/' . $dataset->license_id);
+    $out->triple_uri($ds, 'dcterms:license', $uris->license($dataset->license_id));
   }
   if (isset($dataset->extras->license_link)) {
     $out->triple_uri($ds, 'dcterms:license', $dataset->extras->license_link);
@@ -194,50 +193,52 @@ foreach ($datasets as $key => $dataset) {
     $out->triple_literal($ds, 'ov:ratings_average', $dataset->ratings_average, 'xsd:decimal');
   }
   // Author and maintainer
-  $out->triple_uri($ds, 'dcterms:contributor', $dataset->author ? ($ds . '/author') : null);
-  $out->triple_uri($ds, 'dcterms:contributor', $dataset->maintainer ? ($ds . '/maintainer') : null);
+  $out->triple_uri($ds, 'dcterms:contributor', $dataset->author ? $uris->author($key) : null);
+  $out->triple_uri($ds, 'dcterms:contributor', $dataset->maintainer ? $uris->maintainer($key) : null);
   // Linksets
   foreach ($dataset->outlinks as $target => $link_count) {
-    $out->triple_uri($ds, 'void:subset', $ds . '/links/' . $target);
+    $out->triple_uri($ds, 'void:subset', $uris->linkset($key, $target));
   }
   // Themes
   foreach ($dataset->tags as $tag) {
     if (!isset($themes[$tag])) continue;
-    $out->triple_uri($ds, 'dcterms:subject', $base . 'themes/' . $tag);
+    $out->triple_uri($ds, 'dcterms:subject', $uris->theme($tag));
   }
   // Tags
   foreach ($dataset->tags as $tag) {
-    $out->triple_uri($ds, 'tag:taggedWithTag', $base . 'tags/' . $tag);
+    $out->triple_uri($ds, 'tag:taggedWithTag', $uris->tag($tag));
   }
   // Author details
   if ($dataset->author) {
-    $out->triple_literal($ds . '/author', 'rdfs:label', $dataset->author);
+    $uri = $uris->author($key);
+    $out->triple_literal($uri, 'rdfs:label', $dataset->author);
     if ($dataset->author_email) {
       if (preg_match('!^http://!', $dataset->author_email)) {
-        $out->triple_uri($ds . '/author', 'foaf:homepage', $dataset->author_email);
+        $out->triple_uri($uri, 'foaf:homepage', $dataset->author_email);
       } else if (preg_match('/^[a-zA-Z][\w\.-]*[a-zA-Z0-9]@[a-zA-Z0-9][\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]$/', $dataset->author_email)) {
-        $out->triple_uri($ds . '/author', 'foaf:mbox', 'mailto:' . $dataset->author_email);
+        $out->triple_uri($uri, 'foaf:mbox', 'mailto:' . $dataset->author_email);
       }
     }
   }
   // Maintainer details
   if ($dataset->maintainer) {
-    $out->triple_literal($ds . '/maintainer', 'rdfs:label', $dataset->maintainer);
+    $uri = $uris->maintainer($key);
+    $out->triple_literal($uri, 'rdfs:label', $dataset->maintainer);
     if ($dataset->maintainer_email) {
       if (preg_match('!^http://!', $dataset->maintainer_email)) {
-        $out->triple_uri($ds . '/maintainer', 'foaf:homepage', $dataset->maintainer_email);
+        $out->triple_uri($uri, 'foaf:homepage', $dataset->maintainer_email);
       } else if (preg_match('/^[a-zA-Z][\w\.-]*[a-zA-Z0-9]@[a-zA-Z0-9][\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]$/', $dataset->maintainer_email)) {
-        $out->triple_uri($ds . '/maintainer', 'foaf:mbox', 'mailto:' . $dataset->maintainer_email);
+        $out->triple_uri($uri, 'foaf:mbox', 'mailto:' . $dataset->maintainer_email);
       }
     }
   }
   // Linkset details
   foreach ($dataset->outlinks as $target => $link_count) {
-    $ls = $ds . '/links/' . $target;
-    $out->triple_qname($ls, 'a', 'void:Linkset');
-    $out->triple_uri($ls, 'void:target', $ds);
-    $out->triple_uri($ls, 'void:target', $base . $target);
-    $out->triple_literal($ls, 'void:triples', $link_count, 'xsd:integer');
+    $uri = $uris->linkset($key, $target);
+    $out->triple_qname($uri, 'a', 'void:Linkset');
+    $out->triple_uri($uri, 'void:target', $ds);
+    $out->triple_uri($uri, 'void:target', $base . $target);
+    $out->triple_literal($uri, 'void:triples', $link_count, 'xsd:integer');
   }
   // Resource details (same structure for all kinds of resources)
   $resources = array_merge($dataset->dumps, $dataset->examples, $dataset->other_resources);
@@ -249,6 +250,34 @@ foreach ($datasets as $key => $dataset) {
 }
 
 // Write to file
-echo "Writing to file $filename ... ";
-$out->to_turtle_file($filename);
+echo "Writing to file $dump_filename ... ";
+$out->to_turtle_file($dump_filename);
 echo "OK\n";
+
+
+class LOD_Cloud_URI_Scheme {
+  var $_base;
+  var $_dump_filename;
+
+  function __construct($base_uri, $dump_filename) {
+    $this->_base = $base_uri;
+    $this->_dump_filename = $dump_filename;
+  }
+
+  function dump() { return $this->_base . 'data/' . $this->_dump_filename; }
+  function dataset($id) { return $this->_base . $this->_escape($id); }
+  function linkset($source_id, $target_id) { return $this->dataset($source_id) . '/links/' . $this->_escape($target_id); }
+  function author($dataset_id) { return $this->dataset($dataset_id) . '/author'; }
+  function maintainer($dataset_id) { return $this->dataset($dataset_id) . '/maintainer'; }
+  function licenses() { return $this->_base . 'licenses'; }
+  function license($id) { return $this->licenses() . '/' . $this->_escape($id); }
+  function themes() { return $this->_base . 'themes'; }
+  function theme($id) { return $this->themes() . '/' . $this->_escape($id); }
+  function tags() { return $this->_base . 'tags'; }
+  function tag($id) { return $this->tags() . '/' . $this->_escape($id); }
+
+  function _escape($str) {
+    // TODO actually escape characters not allowed in URIs!
+    return $str;
+  }
+}
