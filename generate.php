@@ -149,7 +149,7 @@ foreach ($themes as $id => $details) {
 // Create RDF information about licenses
 foreach ($licenses as $id => $details) {
   $out->triple_literal($uris->license($id), 'rdfs:label', $details->title);
-  $out->triple_literal($uris->license($id), 'foaf:page', $details->url);
+  $out->triple_uri($uris->license($id), 'foaf:page', $details->url);
 }
 
 // Create RDF information about each dataset
