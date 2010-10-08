@@ -1,0 +1,12 @@
+TODO
+
+- process http://ckan.net/api/rest/licenses
+- better validation for URIs, triple numbers, etc
+- create the two ov: terms I used at open.vocab.org
+- Better/other vocabulary for tags?
+- Interpret some of the tags?
+- Do something with sparql_named_graph custom field
+- Do something with other custom fields
+- Do something with version field
+- Better consolidation of authors/maintainers
+- consolidate the fixed TurtleWriter and contribute back to ARC
