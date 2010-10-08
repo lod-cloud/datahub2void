@@ -100,20 +100,22 @@ $themes = array(
 );
 
 // Prepare RDF writer
+$namespaces = array(
+    'void' => 'http://rdfs.org/ns/void#',
+    'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
+    'owl' => 'http://www.w3.org/2002/07/owl#',
+    'xsd' => 'http://www.w3.org/2001/XMLSchema#',
+    'foaf' => 'http://xmlns.com/foaf/0.1/',
+    'dcterms' => 'http://purl.org/dc/terms/',
+    'dbp' => 'http://dbpedia.org/property/',
+    'void' => 'http://rdfs.org/ns/void#',
+    'tag' => 'http://www.holygoat.co.uk/owl/redwood/0.1/tags/',
+    'skos' => 'http://www.w3.org/2004/02/skos/core#',
+    'ov' => 'http://open.vocab.org/terms/',
+);
 include_once('rdfwriter.inc.php');
-$out = new RDFWriter();
-$out->register_namespace('void', 'http://rdfs.org/ns/void#');
-$out->register_namespace('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
-$out->register_namespace('rdfs', 'http://www.w3.org/2000/01/rdf-schema#');
-$out->register_namespace('owl', 'http://www.w3.org/2002/07/owl#');
-$out->register_namespace('xsd', 'http://www.w3.org/2001/XMLSchema#');
-$out->register_namespace('foaf', 'http://xmlns.com/foaf/0.1/');
-$out->register_namespace('dcterms', 'http://purl.org/dc/terms/');
-$out->register_namespace('dbp', 'http://dbpedia.org/property/');
-$out->register_namespace('void', 'http://rdfs.org/ns/void#');
-$out->register_namespace('tag', 'http://www.holygoat.co.uk/owl/redwood/0.1/tags/');
-$out->register_namespace('skos', 'http://www.w3.org/2004/02/skos/core#');
-$out->register_namespace('ov', 'http://open.vocab.org/terms/');
+$out = new RDFWriter($namespaces);
 
 // Create RDF metadata about the RDF document itself
 $richard = 'http://richard.cyganiak.de/#me';
@@ -246,12 +248,7 @@ foreach ($datasets as $key => $dataset) {
   }
 }
 
-// Serialize to Turtle
-$rdf = $out->get_turtle();
-
 // Write to file
 echo "Writing to file $filename ... ";
-$file = fopen($filename, 'w');
-fputs($file, $rdf);
-fclose($file);
+$out->to_turtle_file($filename);
 echo "OK\n";

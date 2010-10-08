@@ -13,6 +13,12 @@ class RDFWriter {
   var $_namespaces = array();
   var $_triples = array();
 
+  function __construct($namespaces = array()) {
+    foreach ($namespaces as $prefix => $uri) {
+      $this->register_namespace($prefix, $uri);
+    }
+  }
+
   /**
    * Registers a namespace mapping that will be added to the written
    * RDF file.
@@ -71,6 +77,20 @@ class RDFWriter {
   function get_turtle() {
     $ser = new BetterTurtleSerializer($this->_namespaces);
     return $ser->getSerializedTriples($this->_triples);
+  }
+
+  function _write_file($filename, $content) {
+    $file = fopen($filename, 'w');
+    fputs($file, $content);
+    fclose($file);
+  }
+
+  function to_turtle_file($filename) {
+    $this->_write_file($filename, $this->get_turtle());
+  }
+
+  function to_rdfxml_file($filename) {
+    $this->_write_file($filename, $this->get_rdfxml());
   }
 }
 
