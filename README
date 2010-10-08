@@ -50,8 +50,13 @@ provide (subjectively) nicer-looking Turtle output.
 
 TODO
 
-- update the RDF dump via cronjob
-- publish the generated RDF somewhere as linked data
+- update documentation in this file
+- figure out multi-file modelling
+- add metadata for individual files
+- add HTML generation
+- figure out a suitable .htaccess
+- publish the generated RDF as linked data
+- update everything via cronjob
 - better validation for URIs, triple numbers, etc
 - create the two ov: terms I used at open.vocab.org
 - Better/other vocabulary for tags?
