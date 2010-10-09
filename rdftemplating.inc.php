@@ -28,6 +28,13 @@ function rel($property, $uri) {
   }
 }
 
+function rev($property, $uri) {
+  global $___template_engine;
+  foreach ($___template_engine->get_contexts() as $w) {
+    $w->triple_uri($uri, $property, $w->get_subject());
+  }
+}
+
 function include_template($template, $data = array()) {
   global $___template_engine;
   $___template_engine->template($template, $data);

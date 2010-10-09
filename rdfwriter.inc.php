@@ -38,6 +38,10 @@ class RDFWriter {
     $this->_current_subject = $uri;
   }
 
+  function get_subject() {
+    return $this->_current_subject;
+  }
+
   function property_literal($p, $o, $type = null) {
     $this->triple_literal($this->_current_subject, $p, $o, $type);
   }

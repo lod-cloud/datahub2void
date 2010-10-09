@@ -35,6 +35,7 @@ foreach ($dataset->themes as $theme) {
 foreach ($dataset->tags as $tag) {
   rel('tag:taggedWithTag', $uris->tag($tag));
 }
+rev('void:subset', $uris->cloud());
 // Contributor details
 foreach ($dataset->contributors as $contributor) {
   about($uris->contributor($id, $contributor['role']));
@@ -58,6 +59,3 @@ foreach ($resources as $details) {
   property("dcterms:description", $details['description']);
   property("dcterms:format", $details['format']);
 }
-
-about($uris->cloud());
-rel('void:subset', $uris->dataset($id));
