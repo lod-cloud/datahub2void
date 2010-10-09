@@ -50,7 +50,6 @@ provide (subjectively) nicer-looking Turtle output.
 
 TODO
 
-- add separate file for all taggings
 - add .rdf files
 - figure out a suitable means for 303s
 - add HTML generation

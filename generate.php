@@ -109,10 +109,16 @@ foreach ($datasets as $package => $dataset) {
 echo "OK\n";
 
 echo "Misc. dataset cleanup ... ";
+$tags = array();
 foreach ($datasets as $package => $dataset) {
   // Licenses ... Work around broken data for RKB datasets
   if (preg_match('/ /', $dataset->license_id) || $dataset->license_id == 'None') {
     $datasets[$package]->license_id = null;
+  }
+  // Build list of all tags
+  foreach ($dataset->tags as $tag) {
+    if (in_array($tag, $tags)) continue;
+    $tags[] = $tag;
   }
   // Contributors (author, maintainer)
   $datasets[$package]->contributors = array();
@@ -142,6 +148,7 @@ foreach ($datasets as $package => $dataset) {
     }
   }
 }
+asort($tags);
 echo "OK\n";
 
 echo "Fetching license list ... ";
@@ -189,6 +196,7 @@ $engine->template_forward('*', 'dump');
 $engine->template_forward_exclude('metadata', 'dump');
 $engine->render_template('cloud', array('datasets' => $datasets));
 $engine->render_template('themes', array('themes' => $themes, 'datasets' => $datasets));
+$engine->render_template('tags', array('tags' => $tags, 'datasets' => $datasets));
 $engine->render_template('licenses', $licenses);
 foreach ($datasets as $id => $dataset) {
   $engine->render_template('dataset', array('dataset_id' => $id, 'dataset' => $dataset));
