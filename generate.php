@@ -155,6 +155,21 @@ echo "OK (" . count($licenses) . " licenses)\n";
 
 include_once('rdftemplating.inc.php');
 
+$namespaces = array(
+    'void' => 'http://rdfs.org/ns/void#',
+    'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
+    'owl' => 'http://www.w3.org/2002/07/owl#',
+    'xsd' => 'http://www.w3.org/2001/XMLSchema#',
+    'foaf' => 'http://xmlns.com/foaf/0.1/',
+    'dcterms' => 'http://purl.org/dc/terms/',
+    'dbp' => 'http://dbpedia.org/property/',
+    'void' => 'http://rdfs.org/ns/void#',
+    'tag' => 'http://www.holygoat.co.uk/owl/redwood/0.1/tags/',
+    'skos' => 'http://www.w3.org/2004/02/skos/core#',
+    'ov' => 'http://open.vocab.org/terms/',
+);
+
 $uris = new URIScheme($base, array(
     'cloud'       => '/',
     'dataset'     => '/{dataset_id}',
@@ -169,24 +184,7 @@ $uris = new URIScheme($base, array(
     'dump'        => '/data/dump',
 ));
 
-$engine = new TemplateEngine(
-    $dir,
-    $uris,
-    array(
-        'void' => 'http://rdfs.org/ns/void#',
-        'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-        'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
-        'owl' => 'http://www.w3.org/2002/07/owl#',
-        'xsd' => 'http://www.w3.org/2001/XMLSchema#',
-        'foaf' => 'http://xmlns.com/foaf/0.1/',
-        'dcterms' => 'http://purl.org/dc/terms/',
-        'dbp' => 'http://dbpedia.org/property/',
-        'void' => 'http://rdfs.org/ns/void#',
-        'tag' => 'http://www.holygoat.co.uk/owl/redwood/0.1/tags/',
-        'skos' => 'http://www.w3.org/2004/02/skos/core#',
-        'ov' => 'http://open.vocab.org/terms/',
-    ));
-
+$engine = new TemplateEngine($dir, $uris, $namespaces);
 $engine->template_forward('*', 'dump');
 $engine->render_template('cloud', array('datasets' => $datasets));
 $engine->render_template('themes', array('themes' => $themes, 'datasets' => $datasets));
