@@ -50,11 +50,15 @@ provide (subjectively) nicer-looking Turtle output.
 
 TODO
 
-- update documentation in this file
-- figure out multi-file modelling
+- make URI scheme declarative
+- get target file names from URI scheme
+- make current file's URI accessible to templates
 - add metadata for individual files
-- add HTML generation
+- add separate file for all taggings
+- add .rdf files
 - figure out a suitable .htaccess
+- add HTML generation
+- update documentation in this file
 - publish the generated RDF as linked data
 - update everything via cronjob
 - better validation for URIs, triple numbers, etc
