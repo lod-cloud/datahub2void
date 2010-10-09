@@ -58,3 +58,6 @@ foreach ($resources as $details) {
   property("dcterms:description", $details['description']);
   property("dcterms:format", $details['format']);
 }
+
+about($uris->cloud());
+rel('void:subset', $uris->dataset($id));

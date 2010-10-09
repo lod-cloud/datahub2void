@@ -22,6 +22,8 @@ foreach ($group_description->packages as $package_id) {
   if (@$debug_maxdatasets && count($datasets) == $debug_maxdatasets) break;
   echo "Fetching dataset $package_id ... ";
   $package = $ckan->get_package_entity($package_id);
+  $revision = $ckan->get_revision_entity($package->revision_id);
+  $package->timestamp = $revision->timestamp;
   echo $package->name . "\n";
   $datasets[$package->name] = $package;
 }
@@ -171,6 +173,7 @@ $engine = new TemplateEngine(
 
 $engine->start_context('dump');
 $engine->template('dump_metadata');
+$engine->template('cloud', array('datasets' => $datasets), "$dir/index.ttl");
 $engine->template('themes', array('themes' => $themes, 'datasets' => $datasets), "$dir/themes/index.ttl");
 $engine->template('licenses', $licenses, "$dir/licenses/index.ttl");
 foreach ($datasets as $id => $dataset) {
@@ -187,7 +190,7 @@ class LOD_Cloud_URI_Scheme {
     $this->_base = $base_uri;
   }
 
-  function home() { return $this->_base; }
+  function cloud() { return $this->_base; }
   function dump() { return $this->_base . 'data/void.ttl'; }
   function dataset($id) { return $this->_base . $this->_escape($id); }
   function linkset($source_id, $target_id) { return $this->dataset($source_id) . '/links/' . $this->_escape($target_id); }

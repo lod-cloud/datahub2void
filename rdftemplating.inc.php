@@ -28,6 +28,11 @@ function rel($property, $uri) {
   }
 }
 
+function include_template($template, $data = array()) {
+  global $___template_engine;
+  $___template_engine->template($template, $data);
+}
+
 class TemplateEngine {
   var $_contexts = array();
   var $_namespaces;
