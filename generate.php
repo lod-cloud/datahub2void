@@ -154,8 +154,23 @@ echo "OK (" . count($licenses) . " licenses)\n";
 
 
 include_once('rdftemplating.inc.php');
+
+$uris = new URIScheme($base, array(
+    'cloud'       => '/',
+    'dataset'     => '/{dataset_id}',
+    'linkset'     => '/{dataset_id}/links/{target_id}',
+    'contributor' => '/{dataset_id}/{role}',
+    'licenses'    => '/licenses',
+    'license'     => '/licenses/{license_id}',
+    'themes'      => '/themes',
+    'theme'       => '/themes/{theme_id}',
+    'tags'        => '/tags',
+    'tag'         => '/tags/{tag_id}',
+    'dump'        => '/data/dump.ttl',
+));
+
 $engine = new TemplateEngine(
-    new LOD_Cloud_URI_Scheme($base),
+    $uris,
     array(
         'void' => 'http://rdfs.org/ns/void#',
         'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
@@ -179,29 +194,3 @@ foreach ($datasets as $id => $dataset) {
   $engine->render_template('dataset', array('id' => $id, 'dataset' => $dataset), "$dir/$id.ttl");
 }
 $engine->render_template('dump', null, "$dir/data/dump.ttl");
-
-
-class LOD_Cloud_URI_Scheme {
-  var $_base;
-
-  function __construct($base_uri) {
-    $this->_base = $base_uri;
-  }
-
-  function cloud() { return $this->_base; }
-  function dump() { return $this->_base . 'data/dump.ttl'; }
-  function dataset($id) { return $this->_base . $this->_escape($id); }
-  function linkset($source_id, $target_id) { return $this->dataset($source_id) . '/links/' . $this->_escape($target_id); }
-  function contributor($dataset_id, $role) { return $this->dataset($dataset_id) . '/' . $role; }
-  function licenses() { return $this->_base . 'licenses'; }
-  function license($id) { if (!$id) return null; return $this->licenses() . '/' . $this->_escape($id); }
-  function themes() { return $this->_base . 'themes'; }
-  function theme($id) { return $this->themes() . '/' . $this->_escape($id); }
-  function tags() { return $this->_base . 'tags'; }
-  function tag($id) { return $this->tags() . '/' . $this->_escape($id); }
-
-  function _escape($str) {
-    // TODO actually escape characters not allowed in URIs!
-    return $str;
-  }
-}

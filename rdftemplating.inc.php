@@ -1,6 +1,7 @@
 <?php
 
 include_once('rdfwriter.inc.php');
+include_once('urischeme.inc.php');
 
 function about($uri, $type = null) {
   global $___template_engine;
