@@ -1,5 +1,7 @@
 <?php
 
+include_template('metadata');
+
 about($uris->themes(), 'skos:ConceptScheme');
 property('skos:prefLabel', 'LOD Cloud Themes');
 foreach ($themes as $id => $theme) {

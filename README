@@ -50,11 +50,9 @@ provide (subjectively) nicer-looking Turtle output.
 
 TODO
 
-- make current file's URI accessible to templates
-- add metadata for individual files
 - add separate file for all taggings
 - add .rdf files
-- figure out a suitable .htaccess
+- figure out a suitable means for 303s
 - add HTML generation
 - update documentation in this file
 - publish the generated RDF as linked data

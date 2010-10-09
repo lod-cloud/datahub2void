@@ -186,6 +186,7 @@ $uris = new URIScheme($base, array(
 
 $engine = new TemplateEngine($dir, $uris, $namespaces);
 $engine->template_forward('*', 'dump');
+$engine->template_forward_exclude('metadata', 'dump');
 $engine->render_template('cloud', array('datasets' => $datasets));
 $engine->render_template('themes', array('themes' => $themes, 'datasets' => $datasets));
 $engine->render_template('licenses', $licenses);
@@ -193,3 +194,17 @@ foreach ($datasets as $id => $dataset) {
   $engine->render_template('dataset', array('dataset_id' => $id, 'dataset' => $dataset));
 }
 $engine->render_template('dump', null);
+
+/* Assumptions:
+- Based around named URI patterns
+- We can render files. Ingridients:
+   1. Data -- some key-value pairs
+   2. URI pattern name -- instantiated using the data; for filename and base URI
+   3. A template that has the name of the URI pattern -- can include other templates
+- Templates also post any generated triples to a "context" of the same name
+- Context rules can be used to include contexts into other contexts
+- When rendering triple files, any triples included in the context of the same name
+  will be rendered as well
+- URI patterns for which no files have been rendered will be 303-forwarded to the
+  nearest ancestor that has a file rendered
+*/

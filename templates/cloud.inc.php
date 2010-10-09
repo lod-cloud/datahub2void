@@ -1,5 +1,7 @@
 <?php
 
+include_template('metadata');
+
 about($uris->cloud(), 'void:Dataset');
 property('dcterms:title', 'The LOD Cloud');
 property('dcterms:description', 'A collection of datasets that have been published in Linked Data format by contributors to the Linking Open Data community project and other individuals and organisations. The collection is curated by contributors to the CKAN directory.');

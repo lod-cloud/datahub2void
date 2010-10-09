@@ -49,6 +49,7 @@ class TemplateEngine {
   var $_template_forwards = array();
   var $_active_template = null;
   var $_active_context = null;
+  var $_template_data_stack = array();
 
   function __construct($output_dir, $uri_scheme, $namespaces) {
     $this->_output_dir = $output_dir;
@@ -56,6 +57,7 @@ class TemplateEngine {
     $this->_uri_scheme = $uri_scheme;
     global $___template_engine;
     $___template_engine = $this;
+    array_push($this->_template_data_stack, array('modified' => date('c')));
   }
 
   function _write_context_to_file($context, $filename, $format = 'turtle') {
@@ -95,8 +97,16 @@ class TemplateEngine {
       $result[] = $this->_active_context;
     }
     if ($this->_active_template) {
+      $excluded_names = array();
+      if (isset($this->_template_forward_excludes['*'])) {
+        $excluded_names = array_merge($excluded_names, $this->_template_forward_excludes['*']);
+      }
+      if (isset($this->_template_forward_excludes[$this->_active_template])) {
+        $excluded_names = array_merge($excluded_names, $this->_template_forward_excludes[$this->_active_template]);
+      }
       if (isset($this->_template_forwards['*'])) {
         foreach ($this->_template_forwards['*'] as $context) {
+          if (in_array($context, $excluded_names)) continue;
           $c = $this->_context($context);
           if (in_array($c, $result, true)) continue;
           $result[] = $c;
@@ -104,6 +114,7 @@ class TemplateEngine {
       }
       if (isset($this->_template_forwards[$this->_active_template])) {
         foreach ($this->_template_forwards[$this->_active_template] as $context) {
+          if (in_array($context, $excluded_names)) continue;
           $c = $this->_context($context);
           if (in_array($c, $result, true)) continue;
           $result[] = $c;
@@ -116,6 +127,11 @@ class TemplateEngine {
   function template_forward($template, $context) {
     $this->_context($context);  // init a context
     $this->_template_forwards[$template][] = $context;
+  }
+
+  function template_forward_exclude($template, $context) {
+    $this->_context($context);  // init a context
+    $this->_template_forward_excludes[$template][] = $context;
   }
 
   function render_template($template, $data = null, $filename = null) {
@@ -135,16 +151,17 @@ class TemplateEngine {
     $this->_run_template($template, $data);
   }
 
-  function _run_template($template, $data = null) {
+  function _run_template($template, $data = array()) {
     $template_backup = $this->_active_template;
     $this->_active_template = $template;
-    if (is_array($data)) {
-      foreach ($data as $key => $value) {
-        $$key = $value;
-      }
+    $merged_data = array_merge($this->_template_data_stack[count($this->_template_data_stack) - 1], (array) $data);
+    foreach ($merged_data as $key => $value) {
+      $$key = $value;
     }
     $uris = $this->_uri_scheme;
+    array_push($this->_template_data_stack, $merged_data);
     include "templates/$template.inc.php";
+    array_pop($this->_template_data_stack);
     $this->_active_template = $template_backup;
   }
 }

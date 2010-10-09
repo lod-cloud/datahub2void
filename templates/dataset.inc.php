@@ -1,5 +1,7 @@
 <?php
 
+include_template('metadata', array('modified' => $dataset->timestamp, 'source' => $dataset->ckan_url));
+
 about($uris->dataset($dataset_id), 'void:Dataset');
 property('dcterms:title', $dataset->title);
 property('skos:altLabel', @$dataset->extras->shortname);
