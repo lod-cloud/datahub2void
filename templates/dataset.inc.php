@@ -1,6 +1,6 @@
 <?php
 
-about($uris->dataset($id), 'void:Dataset');
+about($uris->dataset($dataset_id), 'void:Dataset');
 property('dcterms:title', $dataset->title);
 property('skos:altLabel', @$dataset->extras->shortname);
 property('dcterms:description', $dataset->notes);
@@ -24,10 +24,10 @@ if ($dataset->ratings_count) {
   property('ov:ratings_average', $dataset->ratings_average, 'xsd:decimal');
 }
 foreach ($dataset->contributors as $contributor) {
-  rel('dcterms:contributor', $uris->contributor($id, $contributor['role']));
+  rel('dcterms:contributor', $uris->contributor($dataset_id, $contributor['role']));
 }
 foreach ($dataset->outlinks as $target => $link_count) {
-  rel('void:subset', $uris->linkset($id, $target));
+  rel('void:subset', $uris->linkset($dataset_id, $target));
 }
 foreach ($dataset->themes as $theme) {
   rel('dcterms:subject', $uris->theme($theme));
@@ -38,7 +38,7 @@ foreach ($dataset->tags as $tag) {
 rev('void:subset', $uris->cloud());
 // Contributor details
 foreach ($dataset->contributors as $contributor) {
-  about($uris->contributor($id, $contributor['role']));
+  about($uris->contributor($dataset_id, $contributor['role']));
   property('rdfs:label', $contributor['name']);
   if ($contributor['email']) {
     rel('foaf:mbox', 'mailto:' . $contributor['email']);
@@ -47,8 +47,8 @@ foreach ($dataset->contributors as $contributor) {
 }
 // Linkset details
 foreach ($dataset->outlinks as $target => $link_count) {
-  about($uris->linkset($id, $target), 'void:Linkset');
-  rel('void:target', $uris->dataset($id));
+  about($uris->linkset($dataset_id, $target), 'void:Linkset');
+  rel('void:target', $uris->dataset($dataset_id));
   rel('void:target', $uris->dataset($target));
   property('void:triples', $link_count, 'xsd:integer');
 }

@@ -9,6 +9,10 @@ class URIScheme {
     $this->_spec = $spec;
   }
 
+  function filename($set, $variables) {
+    return $this->_expand($set, array($variables));
+  }
+    
   function __get($name) {
     if (!isset($this->_spec[$name])) {
       trigger_error("Access to undefined URI '$name'");
@@ -24,12 +28,18 @@ class URIScheme {
   }
 
   function _uri($set, $variables = array()) {
+    $expanded = $this->_expand($set, $variables);
+    if (is_null($expanded)) return null;
+    return $this->_base . $expanded;
+  }
+
+  function _expand($set, $variables = array()) {
     if (!isset($this->_spec[$set])) return null;
     $result = $this->_spec[$set];
     if ($variables) {
       if (is_array($variables[0])) {
         foreach ($variables[0] as $key => $value) {
-          if (empty($value)) continue;
+          if (empty($value) || is_array($value) || is_object($value)) continue;
           $result = str_replace('{' . $key . '}', $this->_escape($value), $result);
         }
       } else {
@@ -41,7 +51,7 @@ class URIScheme {
       }
     }
     if (preg_match('/[{}]/', $result)) return null;
-    return $this->_base . $result;
+    return $result;
   }
 
   function _escape($str) {

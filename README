@@ -50,8 +50,6 @@ provide (subjectively) nicer-looking Turtle output.
 
 TODO
 
-- make URI scheme declarative
-- get target file names from URI scheme
 - make current file's URI accessible to templates
 - add metadata for individual files
 - add separate file for all taggings

@@ -166,10 +166,11 @@ $uris = new URIScheme($base, array(
     'theme'       => '/themes/{theme_id}',
     'tags'        => '/tags',
     'tag'         => '/tags/{tag_id}',
-    'dump'        => '/data/dump.ttl',
+    'dump'        => '/data/dump',
 ));
 
 $engine = new TemplateEngine(
+    $dir,
     $uris,
     array(
         'void' => 'http://rdfs.org/ns/void#',
@@ -187,10 +188,10 @@ $engine = new TemplateEngine(
     ));
 
 $engine->template_forward('*', 'dump');
-$engine->render_template('cloud', array('datasets' => $datasets), "$dir/index.ttl");
-$engine->render_template('themes', array('themes' => $themes, 'datasets' => $datasets), "$dir/themes/index.ttl");
-$engine->render_template('licenses', $licenses, "$dir/licenses/index.ttl");
+$engine->render_template('cloud', array('datasets' => $datasets));
+$engine->render_template('themes', array('themes' => $themes, 'datasets' => $datasets));
+$engine->render_template('licenses', $licenses);
 foreach ($datasets as $id => $dataset) {
-  $engine->render_template('dataset', array('id' => $id, 'dataset' => $dataset), "$dir/$id.ttl");
+  $engine->render_template('dataset', array('dataset_id' => $id, 'dataset' => $dataset));
 }
-$engine->render_template('dump', null, "$dir/data/dump.ttl");
+$engine->render_template('dump', null);

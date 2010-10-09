@@ -42,6 +42,7 @@ function include_template($template, $data = array()) {
 }
 
 class TemplateEngine {
+  var $_output_dir;
   var $_contexts = array();
   var $_namespaces;
   var $_uri_scheme;
@@ -49,7 +50,8 @@ class TemplateEngine {
   var $_active_template = null;
   var $_active_context = null;
 
-  function __construct($uri_scheme, $namespaces) {
+  function __construct($output_dir, $uri_scheme, $namespaces) {
+    $this->_output_dir = $output_dir;
     $this->_namespaces = $namespaces;
     $this->_uri_scheme = $uri_scheme;
     global $___template_engine;
@@ -57,17 +59,20 @@ class TemplateEngine {
   }
 
   function _write_context_to_file($context, $filename, $format = 'turtle') {
+    if (preg_match('!/$!', $filename)) $filename .= 'index';
+    $filename = $this->_output_dir . $filename;
     if (!is_dir(dirname($filename))) {
       echo "Creating directory " . dirname($filename) . " ... ";
       mkdir(dirname($filename), 0777, true);
       echo "OK\n";
     }
-    echo "Writing $filename ... ";
     $format = trim(strtolower($format));
     if ($format == 'rdfxml') {
-      $this->_contexts[$context]->to_rdfxml_file($filename);
+      echo "Writing $filename.rdf ... ";
+      $this->_contexts[$context]->to_rdfxml_file($filename . '.rdf');
     } else {
-      $this->_contexts[$context]->to_turtle_file($filename);
+      echo "Writing $filename.ttl ... ";
+      $this->_contexts[$context]->to_turtle_file($filename . '.ttl');
     }
     echo "OK\n";
   }
@@ -114,6 +119,9 @@ class TemplateEngine {
   }
 
   function render_template($template, $data = null, $filename = null) {
+    if (!$filename) {
+      $filename = $this->_uri_scheme->filename($template, $data);
+    }
     $this->_active_context = $this->_context($template);
     $this->_run_template($template, $data);
     if ($filename) {
