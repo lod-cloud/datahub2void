@@ -55,6 +55,7 @@ class RDFWriter {
   }
 
   function triple_literal($s, $p, $o, $type = null) {
+    if (empty($o)) return;
     $this->_triple($s, $p, $o, 'literal', $this->_expand_qname($type));
   }
 
@@ -77,7 +78,7 @@ class RDFWriter {
   }
 
   function _triple($s, $p, $o, $o_type, $datatype = null) {
-    if (empty($s) || empty($p) || empty($o)) return;
+    if (is_null($s) || is_null($p) || is_null($o)) return;
     $p = ($p == 'a') ? 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' : $this->_expand_qname($p);
     if (!$p) return;
     $this->_triples[] = array('s' => $s, 's_type' => 'uri', 'p' => $p, 'o' => $o, 'o_type' => $o_type, 'o_datatype' => $datatype);
@@ -129,7 +130,7 @@ class BetterTurtleSerializer extends ARC2_TurtleSerializer {
 
   function getTerm($v, $term = '', $qualifier = '') {
     if ($v === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' && $term === 'p') return 'a';
-    if (!is_array($v) && ($term === 's' || $term === 'o' || $term === 'dt')) {
+    if (!is_array($v) && ($term === 's' || $term === 'o' || $term === 'dt' || $term === 'p')) {
       foreach ($this->ns as $prefix => $uri) {
         if (strpos($v, $uri) === 0) {
           $local = substr($v, strlen($uri));
@@ -139,6 +140,9 @@ class BetterTurtleSerializer extends ARC2_TurtleSerializer {
           }
         }
       }
+    }
+    if (!is_array($v)) {
+      return '<' . $v . '>';
     }
     if (is_array($v) && @$v['type'] == 'literal') {
       if (isset($v['datatype'])
@@ -165,7 +169,7 @@ class BetterTurtleSerializer extends ARC2_TurtleSerializer {
       foreach ($ps as $p => $os) {
         if (!$os) continue;
         $p = $this->getTerm($p, 'p');
-        $r .= $p === 'a' ? ' ' : ($first_p ? '' : ';') . $nl . '    ';
+        $r .= $first_p ? ($p === 'a' ? ' ' : ($nl . '    ')) : (';' . $nl . '    ');
         $r .= $p;
         $first_o = 1;
         if (!is_array($os)) {/* single literal o */
