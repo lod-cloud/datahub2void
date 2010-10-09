@@ -171,16 +171,14 @@ $engine = new TemplateEngine(
         'ov' => 'http://open.vocab.org/terms/',
     ));
 
-$engine->start_context('dump');
-$engine->template('dump_metadata');
-$engine->template('cloud', array('datasets' => $datasets), "$dir/index.ttl");
-$engine->template('themes', array('themes' => $themes, 'datasets' => $datasets), "$dir/themes/index.ttl");
-$engine->template('licenses', $licenses, "$dir/licenses/index.ttl");
+$engine->template_forward('*', 'dump');
+$engine->render_template('cloud', array('datasets' => $datasets), "$dir/index.ttl");
+$engine->render_template('themes', array('themes' => $themes, 'datasets' => $datasets), "$dir/themes/index.ttl");
+$engine->render_template('licenses', $licenses, "$dir/licenses/index.ttl");
 foreach ($datasets as $id => $dataset) {
-  $engine->template('dataset', array('id' => $id, 'dataset' => $dataset), "$dir/$id.ttl");
+  $engine->render_template('dataset', array('id' => $id, 'dataset' => $dataset), "$dir/$id.ttl");
 }
-$engine->write_context_to_file('dump', "$dir/data/void.ttl");
-$engine->end_context('dump');
+$engine->render_template('dump', null, "$dir/data/dump.ttl");
 
 
 class LOD_Cloud_URI_Scheme {
@@ -191,7 +189,7 @@ class LOD_Cloud_URI_Scheme {
   }
 
   function cloud() { return $this->_base; }
-  function dump() { return $this->_base . 'data/void.ttl'; }
+  function dump() { return $this->_base . 'data/dump.ttl'; }
   function dataset($id) { return $this->_base . $this->_escape($id); }
   function linkset($source_id, $target_id) { return $this->dataset($source_id) . '/links/' . $this->_escape($target_id); }
   function contributor($dataset_id, $role) { return $this->dataset($dataset_id) . '/' . $role; }
