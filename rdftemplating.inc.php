@@ -60,7 +60,7 @@ class TemplateEngine {
     array_push($this->_template_data_stack, array('modified' => date('c')));
   }
 
-  function _write_context_to_file($context, $filename, $format = 'turtle') {
+  function _write_context_to_file($context, $filename) {
     if (preg_match('!/$!', $filename)) $filename .= 'index';
     $filename = $this->_output_dir . $filename;
     if (!is_dir(dirname($filename))) {
@@ -68,14 +68,9 @@ class TemplateEngine {
       mkdir(dirname($filename), 0777, true);
       echo "OK\n";
     }
-    $format = trim(strtolower($format));
-    if ($format == 'rdfxml') {
-      echo "Writing $filename.rdf ... ";
-      $this->_contexts[$context]->to_rdfxml_file($filename . '.rdf');
-    } else {
-      echo "Writing $filename.ttl ... ";
-      $this->_contexts[$context]->to_turtle_file($filename . '.ttl');
-    }
+    echo "Writing $filename.{rdf|ttl} ... ";
+    $this->_contexts[$context]->to_rdfxml_file($filename . '.rdf');
+    $this->_contexts[$context]->to_turtle_file($filename . '.ttl');
     echo "OK\n";
   }
 
