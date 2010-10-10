@@ -1,6 +1,6 @@
 <?php
 
-include_template('metadata');
+include_template('metadata', array('topic', $uris->cloud));
 
 about($uris->cloud, 'void:Dataset');
 property('dcterms:title', 'The LOD Cloud');

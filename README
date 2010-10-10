@@ -50,7 +50,6 @@ provide (subjectively) nicer-looking Turtle output.
 
 TODO
 
-- Add foaf:primaryTopic from entity URIs to doc URLs
 - add HTML generation
 - update documentation in this file
 - publish the generated RDF as linked data

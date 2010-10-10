@@ -1,6 +1,6 @@
 <?php
 
-include_template('metadata', array('modified' => $dataset->timestamp, 'source' => $dataset->ckan_url));
+include_template('metadata', array('modified' => $dataset->timestamp, 'source' => $dataset->ckan_url, 'topic' => $uris->dataset($dataset_id)));
 
 about($uris->dataset($dataset_id), 'void:Dataset');
 property('dcterms:title', $dataset->title);
@@ -37,7 +37,7 @@ foreach ($dataset->themes as $theme) {
 foreach ($dataset->tags as $tag) {
   rel('tag:taggedWithTag', $uris->tag($tag));
 }
-rev('void:subset', $uris->cloud());
+rev('void:subset', $uris->cloud);
 // Contributor details
 foreach ($dataset->contributors as $contributor) {
   about(($contributor['role'] == 'author') ? $uris->author($dataset_id) : $uris->maintainer($dataset_id));
