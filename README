@@ -50,11 +50,12 @@ provide (subjectively) nicer-looking Turtle output.
 
 TODO
 
-- figure out a suitable means for 303s
+- Add foaf:primaryTopic from entity URIs to doc URLs
 - add HTML generation
 - update documentation in this file
 - publish the generated RDF as linked data
 - update everything via cronjob
+- add a voiD description for this dataset
 - better validation for URIs, triple numbers, etc
 - create the two ov: terms I used at open.vocab.org
 - Better/other vocabulary for tags?

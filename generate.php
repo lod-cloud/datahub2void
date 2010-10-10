@@ -2,7 +2,7 @@
 
 $debug_maxdatasets = 5;
 $base = 'http://lod-cloud.net/';
-$dir = 'output';
+$dir = 'site/__static';
 if (is_dir($dir)) {
   echo "Must delete output directory first: $dir\n";
   die();
@@ -181,7 +181,8 @@ $uris = new URIScheme($base, array(
     'cloud'       => '/',
     'dataset'     => '/{dataset_id}',
     'linkset'     => '/{dataset_id}/links/{target_id}',
-    'contributor' => '/{dataset_id}/{role}',
+    'author'      => '/{dataset_id}/author',
+    'maintainer'  => '/{dataset_id}/maintainer',
     'licenses'    => '/licenses',
     'license'     => '/licenses/{license_id}',
     'themes'      => '/themes',
@@ -202,6 +203,7 @@ foreach ($datasets as $id => $dataset) {
   $engine->render_template('dataset', array('dataset_id' => $id, 'dataset' => $dataset));
 }
 $engine->render_template('dump', null);
+$engine->write_manifest();
 
 /* Assumptions:
 - Based around named URI patterns

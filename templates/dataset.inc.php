@@ -26,7 +26,7 @@ if ($dataset->ratings_count) {
   property('ov:ratings_average', $dataset->ratings_average, 'xsd:decimal');
 }
 foreach ($dataset->contributors as $contributor) {
-  rel('dcterms:contributor', $uris->contributor($dataset_id, $contributor['role']));
+  rel('dcterms:contributor', ($contributor['role'] == 'author') ? $uris->author($dataset_id) : $uris->maintainer($dataset_id));
 }
 foreach ($dataset->outlinks as $target => $link_count) {
   rel('void:subset', $uris->linkset($dataset_id, $target));
@@ -40,7 +40,7 @@ foreach ($dataset->tags as $tag) {
 rev('void:subset', $uris->cloud());
 // Contributor details
 foreach ($dataset->contributors as $contributor) {
-  about($uris->contributor($dataset_id, $contributor['role']));
+  about(($contributor['role'] == 'author') ? $uris->author($dataset_id) : $uris->maintainer($dataset_id));
   property('rdfs:label', $contributor['name']);
   if ($contributor['email']) {
     rel('foaf:mbox', 'mailto:' . $contributor['email']);

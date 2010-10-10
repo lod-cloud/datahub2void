@@ -50,6 +50,7 @@ class TemplateEngine {
   var $_active_template = null;
   var $_active_context = null;
   var $_template_data_stack = array();
+  var $_rendered_templates = array();
 
   function __construct($output_dir, $uri_scheme, $namespaces) {
     $this->_output_dir = $output_dir;
@@ -62,6 +63,11 @@ class TemplateEngine {
 
   function _write_context_to_file($context, $filename) {
     if (preg_match('!/$!', $filename)) $filename .= 'index';
+    if (!is_dir($this->_output_dir)) {
+      echo "Creating directory $this->_output_dir ... ";
+      mkdir($this->_output_dir, 0777, true);
+      echo "OK\n";
+    }
     $filename = $this->_output_dir . $filename;
     if (!is_dir(dirname($filename))) {
       echo "Creating directory " . dirname($filename) . " ... ";
@@ -140,6 +146,9 @@ class TemplateEngine {
       $this->_reset_context($template);
     }
     $this->_active_context = null;
+    if (!in_array($template, $this->_rendered_templates)) {
+      $this->_rendered_templates[] = $template;
+    }
   }
 
   function include_template($template, $data = null) {
@@ -158,5 +167,18 @@ class TemplateEngine {
     include "templates/$template.inc.php";
     array_pop($this->_template_data_stack);
     $this->_active_template = $template_backup;
+  }
+
+  function write_manifest() {
+    $filename = $this->_output_dir . '/__manifest.txt';
+    echo "Writing $filename ... ";
+    $file = fopen($filename, 'w');
+    foreach ($this->_uri_scheme->sets() as $set) {
+      $rendered = in_array($set, $this->_rendered_templates);
+      $regex = $this->_uri_scheme->uri_regex($set);
+      fwrite($file, ($rendered ? '1' : '0') . ' ' . $regex . "\n");
+    }
+    fclose($file);
+    echo "OK\n";
   }
 }

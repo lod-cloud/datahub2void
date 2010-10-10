@@ -1,0 +1,15 @@
+DirectoryIndex index
+Options -MultiViews
+AddType application/rdf+xml .rdf
+AddType text/turtle .ttl
+RewriteEngine On
+
+# Rewrite anything with a file extension to the /static directory
+RewriteCond $0 \.[a-zA-Z0-9]+$
+RewriteCond $0 !^__
+RewriteRule .* /__static/$0 [L]
+
+# Rewrite anything without a file extension to __site.php
+RewriteCond $0 !\.[a-zA-Z0-9]+$
+RewriteCond $0 !^__
+RewriteRule .* /__site/index.php
