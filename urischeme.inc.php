@@ -35,9 +35,18 @@ class URIScheme {
     return $this->_uri($method, $arguments);
   }
 
+  function _is_absolute($uri) {
+    // TODO: Do a proper check
+    return !preg_match('!^/!', $uri);
+  }
+
   function _uri($set, $variables = array()) {
     $expanded = $this->_expand($set, $variables);
     if (is_null($expanded)) return null;
+    if ($this->_is_absolute($expanded)) {
+      return $expanded;
+    }
+    // TODO: Do proper resolution of relative URIs
     return $this->_base . $expanded;
   }
 
