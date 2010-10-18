@@ -185,6 +185,7 @@ $uris = new URIScheme($base, array(
     'maintainer'  => '/{dataset_id}/maintainer',
     'licenses'    => '/licenses',
     'license'     => '/licenses/{license_id}',
+    'license_purl' => 'http://purl.org/okfn/licenses/{license_id}',
     'themes'      => '/themes',
     'theme'       => '/themes/{theme_id}',
     'tags'        => '/tags',
