@@ -13,6 +13,7 @@ rel('foaf:depiction', 'http://richard.cyganiak.de/2007/10/lod/lod-datasets_2010-
 
 rel('rdfs:seeAlso', $uris->themes);
 rel('rdfs:seeAlso', $uris->tags);
+rel('rdfs:seeAlso', $uris->licenses);
 foreach (array_keys($datasets) as $id) {
   rel('void:subset', $uris->dataset($id));
 }
