@@ -1,6 +1,6 @@
 <?php
 
-include_once('arc/ARC2.php');
+include_once('arc2/ARC2.php');
 ARC2::inc('TurtleSerializer');
 ARC2::inc('RDFXMLSerializer');
 
