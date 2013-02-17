@@ -56,6 +56,7 @@ provide (subjectively) nicer-looking Turtle output.
 ## To Do
 
 * Automatically publish the VoID file to lod-cloud.net
+* Fetch all the data with a single API call instead of one per dataset
 * Add a VoID description for this dataset itself
 * Better validation for URIs, triple numbers, etc
 * Better/other vocabulary for tags?
