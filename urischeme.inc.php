@@ -13,14 +13,6 @@ class URIScheme {
     return array_keys($this->_spec);
   }
 
-  function filename($set, $variables) {
-    return $this->_expand($set, array($variables));
-  }
-    
-  function uri_regex($set) {
-    return preg_replace('/{[^}]+}/', '[^/?]+', $this->_spec[$set]);
-  }
-
   function __get($name) {
     if (!isset($this->_spec[$name])) {
       trigger_error("Access to undefined URI '$name'");

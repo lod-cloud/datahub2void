@@ -1,11 +1,10 @@
 <?php
 
-include_template('metadata', array('modified' => $dataset->timestamp, 'source' => $dataset->ckan_url, 'topic' => $uris->dataset($dataset_id)));
-
 about($uris->dataset($dataset_id), 'void:Dataset');
 property('dcterms:title', $dataset->title);
 property('skos:altLabel', @$dataset->extras->shortname);
-property('dcterms:description', $dataset->notes);
+property('dcterms:description', $dataset->notes_html, 'rdf:HTML');
+property('dcterms:modified', $dataset->timestamp, 'xsd:dateTime');
 rel('foaf:homepage', $dataset->url);
 rel('foaf:page', $dataset->ckan_url);
 property('void:triples', @$dataset->extras->triples, 'xsd:integer');
@@ -20,10 +19,6 @@ foreach ($dataset->examples as $example) {
 }
 foreach ($dataset->other_resources as $resource) {
   rel('dcterms:relation', $resource['url']);
-}
-if ($dataset->ratings_count) {
-  property('ov:ratings_count', $dataset->ratings_count, 'xsd:integer');
-  property('ov:ratings_average', $dataset->ratings_average, 'xsd:decimal');
 }
 foreach ($dataset->contributors as $contributor) {
   rel('dcterms:contributor', ($contributor['role'] == 'author') ? $uris->author($dataset_id) : $uris->maintainer($dataset_id));

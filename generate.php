@@ -1,12 +1,8 @@
 <?php
 
-$debug_maxdatasets = 5;
+//$debug_maxdatasets = 5;
 $base = 'http://lod-cloud.net/';
-$dir = 'site/__static';
-if (is_dir($dir)) {
-  echo "Must delete output directory first: $dir\n";
-  die();
-}
+$dump_filename = 'void.ttl';
 
 @ini_set('error_reporting', E_ALL);
 
@@ -23,7 +19,7 @@ foreach ($group_description->packages as $package_id) {
   echo "Fetching dataset $package_id ... ";
   $package = $ckan->get_package_entity($package_id);
   $revision = $ckan->get_revision_entity($package->revision_id);
-  $package->timestamp = $revision->timestamp;
+  $package->timestamp = $revision->timestamp . 'Z';
   echo $package->name . "\n";
   $datasets[$package->name] = $package;
 }
@@ -77,9 +73,19 @@ foreach ($datasets as $package => $dataset) {
   $datasets[$package]->examples = array();
   $datasets[$package]->dumps = array();
   $datasets[$package]->other_resources = array();
-  foreach ($dataset->resources as $resource) {
+  foreach ($dataset->resources as $i => $resource) {
     $url = @trim($resource->url);
-    if (!preg_match('!^(https?|ftp):\/\/[^<> ]*$!', $url)) continue; 
+    // Strip incorrectly inserted http:// sometimes seen on the Data Hub
+    // https://github.com/okfn/ckan/issues/412
+    if (preg_match('!^http://[a-zA-Z][a-zA-Z0-9.+-]*://!', $url)) {
+      $url = substr($url, 7);
+    }
+    // Encode non-URL characters occasionally seen in URLs on the Data Hub
+    $bad_chars = '{}<> ';
+    for ($i = 0; $i < strlen($bad_chars); $i++) {
+      $url = str_replace($bad_chars[$i], urlencode($bad_chars[$i]), $url);
+    }
+    $dataset->resources[$i]->url = $url;
     $format = strtolower(trim($resource->format));
     $description = @$resource->description;
     if ($format == 'api/sparql') {
@@ -111,14 +117,26 @@ echo "OK\n";
 echo "Misc. dataset cleanup ... ";
 $tags = array();
 foreach ($datasets as $package => $dataset) {
+  $datasets[$package]->notes_html = Markdown($datasets[$package]->notes);
+  $datasets[$package]->url = trim($datasets[$package]->url);
+  // Remove 1,000 style punctuation
+  if (preg_match('/^\d\d?\d?(,\d\d\d)+$/', @$datasets[$package]->extras->triples)) {
+    $datasets[$package]->extras->triples = str_replace(',', '', @$datasets[$package]->extras->triples);
+  }
+  // Remove 1.000 style punctuation
+  if (preg_match('/^\d\d?\d?(\.\d\d\d)+$/', @$datasets[$package]->extras->triples)) {
+    $datasets[$package]->extras->triples = str_replace('.', '', @$datasets[$package]->extras->triples);
+  }
   // Licenses ... Work around broken data for RKB datasets
   if (preg_match('/ /', $dataset->license_id) || $dataset->license_id == 'None') {
     $datasets[$package]->license_id = null;
   }
   // Build list of all tags
-  foreach ($dataset->tags as $tag) {
+  foreach ($dataset->tags as $i => $tag) {
+    $tag = str_replace(' ', '-', $tag);
     if (in_array($tag, $tags)) continue;
     $tags[] = $tag;
+    $dataset->tags[$i] = $tag;
   }
   // Contributors (author, maintainer)
   $datasets[$package]->contributors = array();
@@ -193,9 +211,7 @@ $uris = new URIScheme($base, array(
     'dump'        => '/data/dump',
 ));
 
-$engine = new TemplateEngine($dir, $uris, $namespaces);
-$engine->template_forward('*', 'dump');
-$engine->template_forward_exclude('metadata', 'dump');
+$engine = new TemplateEngine($uris, $namespaces);
 $engine->render_template('cloud', array('datasets' => $datasets));
 $engine->render_template('themes', array('themes' => $themes, 'datasets' => $datasets));
 $engine->render_template('tags', array('tags' => $tags, 'datasets' => $datasets));
@@ -204,18 +220,6 @@ foreach ($datasets as $id => $dataset) {
   $engine->render_template('dataset', array('dataset_id' => $id, 'dataset' => $dataset));
 }
 $engine->render_template('dump', null);
-$engine->write_manifest();
-
-/* Assumptions:
-- Based around named URI patterns
-- We can render files. Ingridients:
-   1. Data -- some key-value pairs
-   2. URI pattern name -- instantiated using the data; for filename and base URI
-   3. A template that has the name of the URI pattern -- can include other templates
-- Templates also post any generated triples to a "context" of the same name
-- Context rules can be used to include contexts into other contexts
-- When rendering triple files, any triples included in the context of the same name
-  will be rendered as well
-- URI patterns for which no files have been rendered will be 303-forwarded to the
-  nearest ancestor that has a file rendered
-*/
+echo "Writing results to $dump_filename ... ";
+$engine->write($dump_filename);
+echo "OK\n";

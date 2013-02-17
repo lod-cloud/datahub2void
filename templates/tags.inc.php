@@ -1,7 +1,5 @@
 <?php
 
-include_template('metadata', array('topic' => $uris->tags));
-
 about($uris->tags, 'skos:ConceptScheme');
 property('skos:prefLabel', 'Tags used on LOD Cloud datasets');
 foreach ($tags as $tag) {
