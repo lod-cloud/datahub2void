@@ -11,6 +11,7 @@ property('void:triples', @$dataset->extras->triples, 'xsd:integer');
 rel('dcterms:license', $uris->license($dataset->license_id));
 rel('dcterms:license', @$dataset->extras->license_link);
 rel('void:sparqlEndpoint', $dataset->sparql);
+property('void:uriSpace', @$dataset->extras->namespace);
 foreach ($dataset->dumps as $dump) {
   rel('void:dataDump', $dump['url']);
 }
