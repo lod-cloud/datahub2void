@@ -1,3 +1,4 @@
+
 <?php
 
 //$debug_maxdatasets = 5;
@@ -6,21 +7,52 @@ $dump_filename = 'void.ttl';
 
 @ini_set('error_reporting', E_ALL);
 
+// File with each line dataset name to search
+// For example: aragodbpedia
+$local_file = 'datasets.txt';
+
 include_once('Ckan_client-PHP/Ckan_client.php');
 
-// Fetching datasets from CKAN API
 $ckan = new Ckan_client();
-echo "Fetching dataset list ... ";
-$group_description = $ckan->get_group_entity('lodcloud');
-echo "OK (" . count($group_description->packages) . " datasets)\n";
+$packages;
+
+if(file_exists($local_file) && is_file($local_file))
+{
+    echo "Fetching datasets from text file ... ";
+    $packages = array();
+    $linecount = 0;
+    $handle = fopen($local_file, "r");
+    while (($line = fgets($handle)) !== false) {
+        $data = $ckan->search_dataset($line);
+        $packages[] = $data->results[count($data->results)-1];
+        $linecount++;
+    }
+    if($linecount == 0)
+    {
+    	echo "ERROR (no lines to read)";
+    	fclose($handle);
+    	die();
+    }
+    else echo "OK (" . $linecount . " datasets) <br/><br/>";
+    fclose($handle);
+}
+else
+{
+    echo "Fetching datasets from group 'lodcloud' ... ";
+    $group_description = $ckan->get_group_entity('lodcloud');
+    echo "OK (" . count($group_description->packages) . " datasets) <br/><br/>";
+    $packages = $group_description->packages;
+}
+
+echo "Listing package id and name of datasets: <br/><br/> ";
 $datasets = array();
-foreach ($group_description->packages as $package_id) {
+foreach ($packages as $package_id) {
   if (@$debug_maxdatasets && count($datasets) == $debug_maxdatasets) break;
-  echo "Fetching dataset $package_id ... ";
+  echo "$package_id - ";
   $package = $ckan->get_package_entity($package_id);
   $revision = $ckan->get_revision_entity($package->revision_id);
   $package->timestamp = $revision->timestamp . 'Z';
-  echo $package->name . "\n";
+  echo $package->name . "<br/>";
   $datasets[$package->name] = $package;
 }
 
@@ -43,7 +75,7 @@ $themes = array(
 );
 
 // Extracting linkset info from custom fields
-echo "Calculating linksets ... ";
+echo "<br/>Calculating linksets ... ";
 $linkset_count = 0;
 foreach ($datasets as $package => $details) {
   $datasets[$package]->inlinks = array();
@@ -64,7 +96,7 @@ foreach ($datasets as $package => $details) {
 foreach (array_keys($datasets) as $package) {
   ksort($datasets[$package]->inlinks);
 }
-echo "OK ($linkset_count linksets)\n";
+echo "OK ($linkset_count linksets) </br></br>";
 
 // Inspect resources to identify SPARQL endpoints, dumps, examples etc
 echo "Categorising resources ... ";
@@ -112,7 +144,7 @@ foreach ($datasets as $package => $dataset) {
     }
   }
 }
-echo "OK\n";
+echo "OK <br/></br>";
 
 echo "Misc. dataset cleanup ... ";
 $tags = array();
@@ -167,7 +199,7 @@ foreach ($datasets as $package => $dataset) {
   }
 }
 asort($tags);
-echo "OK\n";
+echo "OK <br/><br/>";
 
 echo "Fetching license list ... ";
 $ckan_licenses = $ckan->get_license_list();
@@ -175,7 +207,7 @@ $licenses = array();
 foreach ($ckan_licenses as $license) {
   $licenses[$license->id] = $license;
 }
-echo "OK (" . count($licenses) . " licenses)\n";
+echo "OK (" . count($licenses) . " licenses) <br/><br/>";
 
 
 include_once('rdftemplating.inc.php');
@@ -221,5 +253,8 @@ foreach ($datasets as $id => $dataset) {
 }
 $engine->render_template('dump', null);
 echo "Writing results to $dump_filename ... ";
-$engine->write($dump_filename);
-echo "OK\n";
+if($engine->write($dump_filename) == false)
+{
+	echo "ERROR (unable to create or write file) <br/><br/>";
+}
+else echo "OK <br/><br/>";
