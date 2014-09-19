@@ -52,7 +52,7 @@ class TemplateEngine {
   }
 
   function write($filename) {
-    $this->_writer->to_turtle_file($filename);
+    return $this->_writer->to_turtle_file($filename);
   }
 
   function render_template($template, $data = null) {

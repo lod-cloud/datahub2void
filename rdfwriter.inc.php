@@ -103,16 +103,24 @@ class RDFWriter {
 
   function _write_file($filename, $content) {
     $file = fopen($filename, 'w');
-    fputs($file, $content);
-    fclose($file);
+    if($file == false)
+    {
+      return false;
+    }
+    else
+    {
+      fputs($file, $content);
+      fclose($file);
+      return true;
+    }
   }
 
   function to_turtle_file($filename) {
-    $this->_write_file($filename, $this->get_turtle());
+    return $this->_write_file($filename, $this->get_turtle());
   }
 
   function to_rdfxml_file($filename) {
-    $this->_write_file($filename, $this->get_rdfxml());
+    return $this->_write_file($filename, $this->get_rdfxml());
   }
 }
 
