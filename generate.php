@@ -33,18 +33,18 @@ if(file_exists($local_file) && is_file($local_file))
     	fclose($handle);
     	die();
     }
-    else echo "OK (" . $linecount . " datasets) <br/><br/>";
+    else echo "OK (" . $linecount . " datasets) \n";
     fclose($handle);
 }
 else
 {
     echo "Fetching datasets from group 'lodcloud' ... ";
     $group_description = $ckan->get_group_entity('lodcloud');
-    echo "OK (" . count($group_description->packages) . " datasets) <br/><br/>";
+    echo "OK (" . count($group_description->packages) . " datasets) \n";
     $packages = $group_description->packages;
 }
 
-echo "Listing package id and name of datasets: <br/><br/> ";
+echo "Listing package id and name of datasets: \n ";
 $datasets = array();
 foreach ($packages as $package_id) {
   if (@$debug_maxdatasets && count($datasets) == $debug_maxdatasets) break;
@@ -52,7 +52,7 @@ foreach ($packages as $package_id) {
   $package = $ckan->get_package_entity($package_id);
   $revision = $ckan->get_revision_entity($package->revision_id);
   $package->timestamp = $revision->timestamp . 'Z';
-  echo $package->name . "<br/>";
+  echo $package->name . "\n";
   $datasets[$package->name] = $package;
 }
 
@@ -75,7 +75,7 @@ $themes = array(
 );
 
 // Extracting linkset info from custom fields
-echo "<br/>Calculating linksets ... ";
+echo "\nCalculating linksets ... ";
 $linkset_count = 0;
 foreach ($datasets as $package => $details) {
   $datasets[$package]->inlinks = array();
@@ -96,7 +96,7 @@ foreach ($datasets as $package => $details) {
 foreach (array_keys($datasets) as $package) {
   ksort($datasets[$package]->inlinks);
 }
-echo "OK ($linkset_count linksets) </br></br>";
+echo "OK ($linkset_count linksets) \n";
 
 // Inspect resources to identify SPARQL endpoints, dumps, examples etc
 echo "Categorising resources ... ";
@@ -144,7 +144,7 @@ foreach ($datasets as $package => $dataset) {
     }
   }
 }
-echo "OK <br/></br>";
+echo "OK \n\n";
 
 echo "Misc. dataset cleanup ... ";
 $tags = array();
@@ -199,7 +199,7 @@ foreach ($datasets as $package => $dataset) {
   }
 }
 asort($tags);
-echo "OK <br/><br/>";
+echo "OK \n\n";
 
 echo "Fetching license list ... ";
 $ckan_licenses = $ckan->get_license_list();
@@ -207,7 +207,7 @@ $licenses = array();
 foreach ($ckan_licenses as $license) {
   $licenses[$license->id] = $license;
 }
-echo "OK (" . count($licenses) . " licenses) <br/><br/>";
+echo "OK (" . count($licenses) . " licenses) \n\n";
 
 
 include_once('rdftemplating.inc.php');
@@ -255,6 +255,6 @@ $engine->render_template('dump', null);
 echo "Writing results to $dump_filename ... ";
 if($engine->write($dump_filename) == false)
 {
-	echo "ERROR (unable to create or write file) <br/><br/>";
+	echo "ERROR (unable to create or write file) \n\n";
 }
-else echo "OK <br/><br/>";
+else echo "OK \n\n";
