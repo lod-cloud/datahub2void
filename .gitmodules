@@ -3,4 +3,4 @@
 	url = https://github.com/semsol/arc2.git
 [submodule "Ckan_client-PHP"]
 	path = Ckan_client-PHP
-url=https://github.com/alejandrofcarrera/Ckan_client-PHP.git
+url=https://github.com/cygri/Ckan_client-PHP.git
